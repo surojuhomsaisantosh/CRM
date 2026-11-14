@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   Search,
   Plus,
@@ -89,11 +89,22 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
   const [projectForms, setProjectForms] = useState<any[]>([])
   const [isLoadingForms, setIsLoadingForms] = useState(false)
   const [selectedFormId, setSelectedFormId] = useState<string>('all')
-  const [selectedDaysBack, setSelectedDaysBack] = useState<number>(30)
   const [showManualFormInput, setShowManualFormInput] = useState(false)
   const [manualFormId, setManualFormId] = useState('')
   const [manualFormName, setManualFormName] = useState('')
   const [isAddingManualForm, setIsAddingManualForm] = useState(false)
+
+  // Prevent background page from scrolling when any modal is active
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(diagnosticsProject || connectModalProject || isModalOpen || deletingId)
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [diagnosticsProject, connectModalProject, isModalOpen, deletingId])
 
   // Filter projects by search query
   const filteredProjects = useMemo(() => {
@@ -312,12 +323,12 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
     }
   }
 
-  // Pull Past Historical Leads with Dropdown Selection (Form + Days Back)
+  // Pull Past Historical Leads for Fixed 30 Days Window
   const handleSyncPastLeads = async () => {
     if (!diagnosticsProject) return
     setIsSyncingLeads(true)
     const formIdToSync = selectedFormId === 'all' ? undefined : selectedFormId
-    const res = await syncHistoricalMetaLeads(diagnosticsProject.id, formIdToSync, selectedDaysBack)
+    const res = await syncHistoricalMetaLeads(diagnosticsProject.id, formIdToSync, 30)
     setIsSyncingLeads(false)
 
     if (res.success) {
@@ -580,7 +591,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
           onClick={(e) => {
             if (e.target === e.currentTarget) setConnectModalProject(null)
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs overflow-y-auto overscroll-contain"
         >
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 sm:p-7 shadow-2xl border border-[#e8ecf2] my-8 space-y-6">
             <div className="flex items-start justify-between pb-4 border-b border-[#e8ecf2]">
@@ -694,7 +705,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
           onClick={(e) => {
             if (e.target === e.currentTarget) setDiagnosticsProject(null)
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs overflow-y-auto overscroll-contain"
         >
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 sm:p-7 shadow-2xl border border-[#e8ecf2] my-8 space-y-6">
             {/* Header */}
@@ -867,7 +878,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
                       </button>
                     </div>
 
-                    {/* Historical Lead Sync Card with Dropdown Selectors */}
+                    {/* Historical Lead Sync Card - Fixed 30 Days Engine */}
                     <div className="rounded-xl border border-[#c7d9f8] bg-gradient-to-br from-[#f0f6ff] to-[#f8fafd] p-4 space-y-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-0.5">
@@ -876,53 +887,37 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
                             <span>Historical Lead Ingestion Engine</span>
                           </div>
                           <p className="text-xs text-[#475569]">
-                            Select a specific lead form and date range to pull existing leads that were submitted before webhook connection.
+                            Pull past leads submitted over the last 30 days that arrived before webhook synchronization.
                           </p>
                         </div>
                       </div>
 
-                      {/* Dropdown Selectors Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                        {/* 1. Form Dropdown Selector */}
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold text-[#0f1d33] uppercase tracking-wider flex items-center gap-1">
-                            <Layers className="w-3.5 h-3.5 text-[#5a6a82]" />
+                      {/* Single Form Dropdown Selector with Fixed 30 Days Badge */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-[#0f1d33] uppercase tracking-wider flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-[#1877f2]" />
                             Target Lead Form
                           </label>
-                          <select
-                            value={selectedFormId}
-                            onChange={(e) => setSelectedFormId(e.target.value)}
-                            className="w-full px-3 py-2 text-xs bg-white border border-[#cbd5e1] rounded-lg text-[#0f1d33] font-medium focus:outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] cursor-pointer"
-                          >
-                            <option value="all">
-                              ⚡ All Active Forms ({projectForms.length} synced)
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-[#1877f2] border border-blue-200">
+                            <Calendar className="w-3 h-3" />
+                            Fixed Window: Last 30 Days
+                          </span>
+                        </div>
+                        <select
+                          value={selectedFormId}
+                          onChange={(e) => setSelectedFormId(e.target.value)}
+                          className="w-full px-3.5 py-2.5 text-xs bg-white border border-[#cbd5e1] rounded-lg text-[#0f1d33] font-medium focus:outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] cursor-pointer"
+                        >
+                          <option value="all">
+                            ⚡ All Active Forms ({projectForms.length} synced)
+                          </option>
+                          {projectForms.map((f) => (
+                            <option key={f.form_id} value={f.form_id}>
+                              {f.form_name || f.name || f.form_id} (ID: {f.form_id})
                             </option>
-                            {projectForms.map((f) => (
-                              <option key={f.form_id} value={f.form_id}>
-                                {f.form_name || f.name || f.form_id} (ID: {f.form_id})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* 2. Date Range Dropdown Selector */}
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold text-[#0f1d33] uppercase tracking-wider flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-[#5a6a82]" />
-                            Date Range Backfill
-                          </label>
-                          <select
-                            value={selectedDaysBack}
-                            onChange={(e) => setSelectedDaysBack(Number(e.target.value))}
-                            className="w-full px-3 py-2 text-xs bg-white border border-[#cbd5e1] rounded-lg text-[#0f1d33] font-medium focus:outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] cursor-pointer"
-                          >
-                            <option value={30}>📅 Last 30 Days (Recommended)</option>
-                            <option value={7}>📅 Last 7 Days (Past Week)</option>
-                            <option value={14}>📅 Last 14 Days (Past 2 Weeks)</option>
-                            <option value={60}>📅 Last 60 Days (Past 2 Months)</option>
-                            <option value={90}>📅 Last 90 Days (Meta API Maximum)</option>
-                          </select>
-                        </div>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Pull Action Button */}
@@ -944,7 +939,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
                           ) : (
                             <>
                               <Sparkles className="w-4 h-4" />
-                              <span>Pull Past Leads (Last {selectedDaysBack} Days)</span>
+                              <span>Pull Past Leads (Last 30 Days)</span>
                             </>
                           )}
                         </button>
@@ -1132,7 +1127,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsModalOpen(false)
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs overflow-y-auto overscroll-contain"
         >
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl border border-[#e8ecf2] my-8 flex flex-col">
             <div className="flex items-center justify-between pb-4 border-b border-[#e8ecf2] mb-5">
@@ -1292,7 +1287,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
       {deletingId && (
         <div
           onClick={() => setDeletingId(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1d33]/50 p-4 backdrop-blur-xs overscroll-contain"
         >
           <div
             onClick={(e) => e.stopPropagation()}

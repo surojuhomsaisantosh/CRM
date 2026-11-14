@@ -292,11 +292,6 @@ export default function LoginPage() {
             </div>
           )}
         </div>
-
-        {/* Security Notice */}
-        <p className="text-center text-xs text-[#8a99ad]">
-          Protected enterprise portal &bull; Authorized personnel only
-        </p>
       </div>
     </div>
   );

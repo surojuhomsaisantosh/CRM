@@ -7,7 +7,6 @@ const ALL_MODULES = [
   'dashboard',
   'leads',
   'whatsapp',
-  'projects',
   'reports',
   'modules',
   'users',

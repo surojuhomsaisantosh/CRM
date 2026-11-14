@@ -8,7 +8,6 @@ const CRM_MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'leads', label: 'Leads' },
   { id: 'whatsapp', label: 'WhatsApp Leads' },
-  { id: 'projects', label: 'Projects' },
   { id: 'reports', label: 'Reports' },
   { id: 'modules', label: 'Modules' },
   { id: 'users', label: 'Users' },

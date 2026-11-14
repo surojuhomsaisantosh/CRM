@@ -121,33 +121,3 @@ export const INITIAL_DEMO_STATUSES = [
   { id: 'st-6', key: 'won', name: 'Won', color: '#059669', is_default: false, sort_order: 6 },
   { id: 'st-7', key: 'lost', name: 'Lost', color: '#ef4444', is_default: false, sort_order: 7 },
 ];
-
-export const INITIAL_DEMO_PROJECTS = [
-  {
-    id: 'proj-1',
-    name: 'Skyline Heights',
-    category_name: 'Luxury Residential',
-    location: 'Indiranagar, Bangalore',
-    description: 'Ultra-luxury high-rise residences with panoramic city views and 40+ clubhouse amenities.',
-    google_maps_url: 'https://maps.google.com',
-    approval_certificate_label: 'RERA & BBMP Approved',
-  },
-  {
-    id: 'proj-2',
-    name: 'Emerald Valley Villas',
-    category_name: 'Gated Villa Community',
-    location: 'Gachibowli Financial District, Hyderabad',
-    description: 'Serene lakeside 4 & 5 BHK villas designed with biophilic architecture and smart home automation.',
-    google_maps_url: 'https://maps.google.com',
-    approval_certificate_label: 'HMDA & RERA Approved',
-  },
-  {
-    id: 'proj-3',
-    name: 'Grand Central Towers',
-    category_name: 'Commercial Tech Park',
-    location: 'Bandra Kurla Complex (BKC), Mumbai',
-    description: 'Grade-A LEED Platinum certified sustainable corporate office suites.',
-    google_maps_url: 'https://maps.google.com',
-    approval_certificate_label: 'MCGM & RERA Approved',
-  },
-];

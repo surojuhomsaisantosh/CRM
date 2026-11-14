@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Users2,
   MessageCircle,
-  Building,
   BarChart3,
   Sliders,
   ShieldCheck,
@@ -59,11 +58,6 @@ export function Sidebar({
       title: 'WhatsApp Hub',
       href: '/crm/whatsapp',
       icon: MessageCircle,
-    },
-    {
-      title: 'Projects',
-      href: '/crm/projects',
-      icon: Building,
     },
     {
       title: 'Reports & Analytics',

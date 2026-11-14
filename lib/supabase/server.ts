@@ -10,7 +10,7 @@ export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || 'https://placeholder.supabase.co';
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || 'dummy-anon-key-placeholder';
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+  const client = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value;
@@ -31,6 +31,33 @@ export async function createClient() {
       },
     },
   });
+
+  const isDemo = cookieStore.get('crm_demo_session')?.value === 'admin';
+  if (isDemo) {
+    const originalGetUser = client.auth.getUser.bind(client.auth);
+    client.auth.getUser = async (jwt?: string) => {
+      const real = await originalGetUser(jwt);
+      if (real.data?.user) return real;
+
+      return {
+        data: {
+          user: {
+            id: 'demo-super-admin-001',
+            email: 'admin@crm.internal',
+            user_metadata: { role: 'Super Admin', name: 'Demo Administrator' },
+            app_metadata: { role: 'Super Admin', provider: 'demo' },
+            aud: 'authenticated',
+            role: 'authenticated',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as any,
+        },
+        error: null,
+      };
+    };
+  }
+
+  return client;
 }
 
 /**

@@ -46,18 +46,21 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const isDemoSession = request.cookies.get('crm_demo_session')?.value === 'admin';
+  const isAuthenticated = Boolean(user || isDemoSession);
+
   const isLoginPage = request.nextUrl.pathname === '/crm/login';
   const isCrmRoute = request.nextUrl.pathname.startsWith('/crm');
 
   // If user is not logged in and visiting protected CRM route
-  if (!user && isCrmRoute && !isLoginPage) {
+  if (!isAuthenticated && isCrmRoute && !isLoginPage) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/crm/login';
     return NextResponse.redirect(redirectUrl);
   }
 
   // If user is logged in and trying to access the login page
-  if (user && isLoginPage) {
+  if (isAuthenticated && isLoginPage) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/crm';
     return NextResponse.redirect(redirectUrl);

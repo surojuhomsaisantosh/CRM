@@ -438,3 +438,7 @@ backup/
 # Next.js build & node_modules
 .next/
 node_modules/
+
+# Changelog folder (local tracking)
+changelog/
+change_log/

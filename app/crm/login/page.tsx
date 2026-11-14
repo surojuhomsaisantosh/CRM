@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Building2, Eye, EyeOff, Loader2, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Building2, Eye, EyeOff, Loader2, Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -16,7 +16,11 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Universal';
+  const handleFillDemo = () => {
+    setEmail('admin@crm.internal');
+    setPassword('admin123');
+    toast.info('Demo credentials filled: admin@crm.internal / admin123');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +34,22 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // 1. Instant Demo Bypass Check (Works out-of-the-box before Supabase connection)
+      const cleanEmail = email.trim().toLowerCase();
+      if (
+        (cleanEmail === 'admin@crm.internal' || cleanEmail === 'admin@crm.com' || cleanEmail === 'demo@crm.internal') &&
+        password === 'admin123'
+      ) {
+        document.cookie = 'crm_demo_session=admin; path=/; max-age=86400; SameSite=Lax';
+        toast.success('Demo login successful! Logged in as Super Admin.');
+        router.push('/crm');
+        router.refresh();
+        return;
+      }
+
+      // 2. Standard Supabase Auth Check (when Supabase credentials are configured)
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       });
 
@@ -56,10 +74,10 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8fa] p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0f1d33] to-[#1e3a5f] shadow-lg shadow-[#0f1d33]/10 text-[#c4a55a] mb-2">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0f1d33] to-[#1e3a5f] shadow-lg shadow-[#0f1d33]/10 text-[#c4a55a] mb-1">
             <Building2 className="w-8 h-8" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f1d33] tracking-tight">
@@ -68,6 +86,29 @@ export default function LoginPage() {
           <p className="text-sm text-[#5a6a82]">
             Enter your credentials to access the internal dashboard.
           </p>
+        </div>
+
+        {/* Demo Credentials Quick-Card */}
+        <div className="rounded-xl border border-[#c4a55a]/40 bg-[#fffdfa] p-4 shadow-xs">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8a7238]">
+                <Sparkles className="w-3.5 h-3.5" /> Demo Access Ready
+              </span>
+              <p className="text-xs text-[#5a6a82]">
+                Email: <code className="font-mono text-[#0f1d33] font-semibold">admin@crm.internal</code>
+                <br />
+                Password: <code className="font-mono text-[#0f1d33] font-semibold">admin123</code>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleFillDemo}
+              className="shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-[#c4a55a] text-[#0f1d33] hover:bg-[#b59549] transition-colors shadow-2xs"
+            >
+              Fill Demo
+            </button>
+          </div>
         </div>
 
         {/* Login Card */}

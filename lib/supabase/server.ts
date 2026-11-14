@@ -29,17 +29,6 @@ const fastServerFetch: typeof fetch = async (input, init) => {
   return fetch(input, init);
 };
 
-const DEMO_USER_OBJECT = {
-  id: 'demo-super-admin-001',
-  email: 'admin@crm.internal',
-  user_metadata: { role: 'Super Admin', name: 'Demo Administrator' },
-  app_metadata: { role: 'Super Admin', provider: 'demo' },
-  aud: 'authenticated',
-  role: 'authenticated',
-  created_at: '2026-01-01T00:00:00.000Z',
-  updated_at: '2026-01-01T00:00:00.000Z',
-};
-
 /**
  * Server client honoring the current user's authenticated session via cookies.
  */
@@ -53,7 +42,7 @@ export async function createClient() {
     ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim()
     : 'dummy-anon-key-placeholder';
 
-  const client = createServerClient(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value;
@@ -77,18 +66,6 @@ export async function createClient() {
       fetch: fastServerFetch,
     },
   });
-
-  const isDemo = cookieStore.get('crm_demo_session')?.value === 'admin' || !isConfigured;
-
-  if (isDemo) {
-    // Return demo user immediately (0ms) - DO NOT make external DNS network calls!
-    client.auth.getUser = async () => ({
-      data: { user: DEMO_USER_OBJECT as any },
-      error: null,
-    });
-  }
-
-  return client;
 }
 
 /**

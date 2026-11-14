@@ -20,17 +20,6 @@ const fastBrowserFetch: typeof fetch = async (input, init) => {
   return fetch(input, init);
 };
 
-const DEMO_USER_OBJECT = {
-  id: 'demo-super-admin-001',
-  email: 'admin@crm.internal',
-  user_metadata: { role: 'Super Admin', name: 'Demo Administrator' },
-  app_metadata: { role: 'Super Admin', provider: 'demo' },
-  aud: 'authenticated',
-  role: 'authenticated',
-  created_at: '2026-01-01T00:00:00.000Z',
-  updated_at: '2026-01-01T00:00:00.000Z',
-};
-
 export function createClient() {
   const isConfigured = isBrowserSupabaseConfigured();
   const supabaseUrl = isConfigured
@@ -40,34 +29,9 @@ export function createClient() {
     ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim()
     : 'dummy-anon-key-placeholder';
 
-  const client = createBrowserClient(supabaseUrl, supabaseKey, {
+  return createBrowserClient(supabaseUrl, supabaseKey, {
     global: {
       fetch: fastBrowserFetch,
     },
   });
-
-  const originalGetUser = client.auth.getUser.bind(client.auth);
-  client.auth.getUser = async (jwt?: string) => {
-    const isDemo = typeof document !== 'undefined' && document.cookie.includes('crm_demo_session=admin');
-    if (isDemo || !isConfigured) {
-      return {
-        data: { user: DEMO_USER_OBJECT as any },
-        error: null,
-      };
-    }
-    return await originalGetUser(jwt);
-  };
-
-  const originalSignOut = client.auth.signOut.bind(client.auth);
-  client.auth.signOut = async (options?: any) => {
-    if (typeof document !== 'undefined') {
-      document.cookie = 'crm_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    }
-    if (!isConfigured) {
-      return { error: null };
-    }
-    return await originalSignOut(options);
-  };
-
-  return client;
 }

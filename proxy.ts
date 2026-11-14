@@ -46,8 +46,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isDemoSession = request.cookies.get('crm_demo_session')?.value === 'admin';
-  const isAuthenticated = Boolean(user || isDemoSession);
+  const isAuthenticated = Boolean(user);
 
   const isLoginPage = request.nextUrl.pathname === '/crm/login';
   const isResetPasswordPage = request.nextUrl.pathname === '/crm/reset-password';

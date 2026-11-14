@@ -6,7 +6,7 @@ import { Sidebar } from "./dashboard/Sidebar"
 import { createClient } from "@/lib/supabase/client"
 import { Building2, Menu, X } from "lucide-react"
 import Link from "next/link"
-import { BrandLogo } from "@/components/branding/BrandLogo"
+import { BrandLogo } from "@/app/crm/settings/brand-settings/BrandLogo"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

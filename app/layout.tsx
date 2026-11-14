@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from 'sonner';
-import { BrandThemeApplier } from '@/components/branding/BrandThemeApplier';
+import { BrandThemeApplier } from '@/app/crm/settings/brand-settings/BrandThemeApplier';
 
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_COMPANY_NAME || 'CRM',

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Building2, Eye, EyeOff, Loader2, Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { BrandLogo } from '@/components/branding/BrandLogo';
+import { BrandLogo } from '@/app/crm/settings/brand-settings/BrandLogo';
 
 export default function LoginPage() {
   const router = useRouter();

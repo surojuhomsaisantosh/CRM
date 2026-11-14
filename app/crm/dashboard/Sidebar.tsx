@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { BrandLogo } from '@/components/branding/BrandLogo';
+import { BrandLogo } from '@/app/crm/settings/brand-settings/BrandLogo';
 
 interface SidebarProps {
   isCollapsed: boolean;

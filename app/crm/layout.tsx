@@ -9,7 +9,7 @@ import Link from "next/link"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const isLoginPage = pathname === '/crm/login'
+  const isAuthPage = pathname === '/crm/login' || pathname === '/crm/reset-password'
 
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname])
 
   useEffect(() => {
-    if (isLoginPage) return
+    if (isAuthPage) return
 
     async function fetchRole() {
       const supabase = createClient()
@@ -35,10 +35,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     fetchRole()
-  }, [isLoginPage])
+  }, [isAuthPage])
 
-  // Login page renders full screen without sidebar or mobile navigation
-  if (isLoginPage) {
+  // Auth pages (login, reset-password) render full screen without sidebar or mobile navigation
+  if (isAuthPage) {
     return <>{children}</>
   }
 

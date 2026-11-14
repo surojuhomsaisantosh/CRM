@@ -1167,7 +1167,7 @@ export default function LeadsClient({
                     className="rounded border-[#e8ecf2] text-[#1e3a5f] focus:ring-[#1e3a5f]"
                   />
                 </th>
-                <th className="px-3 py-2 font-medium w-16 text-[#1e3a5f]">Sr. No</th>
+                <th className="px-3 py-2 font-medium w-20 whitespace-nowrap text-[#1e3a5f]">Sr. No</th>
                 <th className="px-3 py-2 font-medium cursor-pointer hover:bg-[#e8ecf2] transition-colors whitespace-nowrap" onClick={() => handleSort('created_at')}>
                   <div className="flex items-center">Date <SortIcon field="created_at" /></div>
                 </th>
@@ -1200,7 +1200,7 @@ export default function LeadsClient({
                         className="rounded border-[#e8ecf2] text-[#1e3a5f] focus:ring-[#1e3a5f]"
                       />
                     </td>
-                    <td className="px-3 py-2 text-[#5a6a82] text-sm">
+                    <td className="px-3 py-2 text-[#5a6a82] text-sm whitespace-nowrap">
                       {(currentPage - 1) * pageSize + filteredLeads.indexOf(lead) + 1}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">

@@ -6,6 +6,7 @@ export type AccessLevel = 'none' | 'view' | 'edit';
 const ALL_MODULES = [
   'dashboard',
   'leads',
+  'inbox',
   'whatsapp',
   'reports',
   'modules',
@@ -99,7 +100,12 @@ export async function requireAccess(moduleName: string): Promise<AccessLevel> {
   }
 
   const permissions = await getEffectivePermissions(user.id);
-  const userAccess = permissions[moduleName] || 'none';
+  let userAccess = permissions[moduleName];
+  if (!userAccess || userAccess === 'none') {
+    if (moduleName === 'inbox') userAccess = permissions['whatsapp'];
+    else if (moduleName === 'whatsapp') userAccess = permissions['inbox'];
+  }
+  userAccess = userAccess || 'none';
 
   if (userAccess === 'none') {
     redirect('/crm/unauthorized');

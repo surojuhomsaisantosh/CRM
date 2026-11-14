@@ -237,7 +237,7 @@ export default function DashboardPage() {
             <table className="w-full text-xs text-left relative">
               <thead className="bg-[#f7f8fa] text-[#5a6a82] sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 font-medium w-16 text-[#1e3a5f]">Sr. No</th>
+                  <th className="px-4 py-3 font-medium w-20 whitespace-nowrap text-[#1e3a5f]">Sr. No</th>
                   <th className="px-4 py-3 font-medium text-[#1e3a5f]">Lead Info</th>
                   <th className="px-4 py-3 font-medium text-[#1e3a5f]">Source</th>
                   <th className="px-4 py-3 font-medium text-[#1e3a5f]">Status</th>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                 ) : tableLeads.length > 0 ? (
                   tableLeads.map((lead, index) => (
                     <tr key={lead.id} className="hover:bg-[#f8fafc] transition-colors">
-                      <td className="px-4 py-3 font-medium text-[#5a6a82]">
+                      <td className="px-4 py-3 font-medium text-[#5a6a82] whitespace-nowrap">
                         {(currentPage - 1) * pageSize + index + 1}
                       </td>
                       <td className="px-4 py-3">

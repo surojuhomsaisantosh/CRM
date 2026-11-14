@@ -61,7 +61,7 @@ export function Sidebar({
     },
     {
       title: 'Inbox',
-      href: '/crm/whatsapp',
+      href: '/crm/inbox',
       icon: Inbox,
     },
     {

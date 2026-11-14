@@ -79,17 +79,18 @@ export default function LoginPage() {
         redirectTo: redirectUrl,
       });
 
-      if (error) {
-        setErrorMessage(error.message);
-        toast.error(error.message);
+      // OWASP guidelines: Prevent user enumeration by returning a generic confirmation
+      if (error && error.status === 429) {
+        setErrorMessage('Too many requests. Please wait a moment and try again.');
+        toast.error('Too many requests. Please wait a moment.');
         return;
       }
 
       setForgotSuccess(true);
-      toast.success('Password recovery link sent! Check your inbox.');
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to send recovery email.');
-      toast.error('Error sending reset link.');
+      toast.success('If the email exists, a password reset link has been sent.');
+    } catch {
+      setForgotSuccess(true);
+      toast.success('If the email exists, a password reset link has been sent.');
     } finally {
       setIsLoading(false);
     }
@@ -219,7 +220,7 @@ export default function LoginPage() {
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-[#0f1d33]">Check Your Email</h3>
                     <p className="text-xs text-[#5a6a82] leading-relaxed">
-                      We sent a password reset link to <strong className="text-[#0f1d33]">{email}</strong>. Click the link in the email to set a new password.
+                      If an account exists for <strong className="text-[#0f1d33]">{email}</strong>, a password reset link has been sent. Please check your inbox and spam folder.
                     </p>
                   </div>
                   <div className="pt-3">

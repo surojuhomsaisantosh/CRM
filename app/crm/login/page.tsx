@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Eye, EyeOff, Loader2, Lock, Mail, ArrowRight, Sparkles, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, Mail, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrandLogo } from '@/app/crm/settings/brand-settings/BrandLogo';
 
@@ -19,12 +19,6 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState(false);
 
-  const handleFillDemo = () => {
-    setEmail('admin@crm.internal');
-    setPassword('admin123');
-    toast.info('Demo credentials filled: admin@crm.internal / admin123');
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -37,20 +31,9 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // 1. Instant Demo Bypass Check (Works out-of-the-box)
       const cleanEmail = email.trim().toLowerCase();
-      if (
-        (cleanEmail === 'admin@crm.internal' || cleanEmail === 'admin@crm.com' || cleanEmail === 'demo@crm.internal') &&
-        password === 'admin123'
-      ) {
-        document.cookie = 'crm_demo_session=admin; path=/; max-age=86400; SameSite=Lax';
-        toast.success('Demo login successful! Logged in as Super Admin.');
-        router.push('/crm');
-        router.refresh();
-        return;
-      }
 
-      // 2. Standard Supabase Auth Check
+      // Authenticate via Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
@@ -127,32 +110,6 @@ export default function LoginPage() {
               : 'Recover your account access via your registered email.'}
           </p>
         </div>
-
-        {/* Demo Credentials Quick-Card (shown on signin) */}
-        {mode === 'signin' && (
-          <div className="rounded-xl border border-[#c4a55a]/40 bg-[#fffdfa] p-4 shadow-xs">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8a7238]">
-                  <Sparkles className="w-3.5 h-3.5" /> Demo Access Ready
-                </span>
-                <p className="text-xs text-[#5a6a82]">
-                  Email: <code className="font-mono text-[#0f1d33] font-semibold">admin@crm.internal</code>
-                  <br />
-                  Password: <code className="font-mono text-[#0f1d33] font-semibold">admin123</code>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                className="shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg text-[#0f1d33] transition-colors shadow-2xs hover:opacity-90 cursor-pointer"
-                style={{ backgroundColor: 'var(--crm-accent, #c4a55a)' }}
-              >
-                Fill Demo
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Auth Card */}
         <div className="rounded-2xl border border-[#e8ecf2] bg-white p-6 sm:p-8 shadow-sm">

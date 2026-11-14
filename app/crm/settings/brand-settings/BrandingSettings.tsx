@@ -495,7 +495,7 @@ export default function BrandingSettings() {
           onClick={() => setShowPreviewModal(false)}
         >
           <div
-            className="bg-white rounded-2xl border border-[#e8ecf2] shadow-2xl max-w-md w-full p-6 space-y-5"
+            className="bg-white rounded-2xl border border-[#e8ecf2] shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#f1f4f8]">

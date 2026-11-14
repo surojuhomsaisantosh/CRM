@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Edit2, Trash2, X, Search, Globe, FilterX, Download, MessageCircle, Megaphone, Settings, ArrowUp, ArrowDown, ArrowUpDown, Check, RefreshCw, AlertTriangle, Loader2, FolderKanban, FileCheck2, FileX2, ChevronDown } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Search, Globe, FilterX, Download, MessageCircle, Megaphone, Settings, ArrowUp, ArrowDown, ArrowUpDown, Check, RefreshCw, AlertTriangle, Loader2, FolderKanban, FileCheck2, FileX2, ChevronDown, Phone } from 'lucide-react'
 
 
 import { createClient } from '@/lib/supabase/client'
@@ -1359,8 +1359,18 @@ export default function LeadsClient({
                 <div className="grid grid-cols-2 gap-2 text-sm ml-7">
                   <div className="flex flex-col">
                     <span className="text-xs text-[#5a6a82] mb-0.5">Contact</span>
-                    <span className="text-[#0f1d33] font-medium">{lead.phone || '-'}</span>
-                    <span className="text-xs text-[#5a6a82] truncate block max-w-full overflow-hidden" title={lead.email}>{lead.email}</span>
+                    {lead.phone ? (
+                      <a 
+                        href={`tel:${lead.phone}`} 
+                        className="text-[#0f1d33] font-semibold hover:underline inline-flex items-center gap-1 active:text-blue-700 transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{lead.phone}</span>
+                      </a>
+                    ) : (
+                      <span className="text-[#0f1d33] font-medium">-</span>
+                    )}
+                    <span className="text-xs text-[#5a6a82] truncate block max-w-full overflow-hidden mt-0.5" title={lead.email}>{lead.email}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs text-[#5a6a82] mb-0.5">Source</span>
@@ -1381,7 +1391,7 @@ export default function LeadsClient({
                     <select
                       value={lead.status || 'new'}
                       onChange={(e) => handleStatusChange(lead.id, e.target.value)}
-                      className={`inline-flex items-center rounded-full pl-2.5 pr-6 py-1 text-xs font-semibold capitalize appearance-none cursor-pointer border focus:ring-0 hover:opacity-85 transition-opacity ${getStatusBadgeStyle(lead.status)}`}
+                      className={`inline-flex items-center rounded-full pl-2.5 pr-6 py-1.5 text-xs font-semibold capitalize appearance-none cursor-pointer border focus:ring-0 hover:opacity-85 transition-opacity ${getStatusBadgeStyle(lead.status)}`}
                     >
                       {statuses.length > 0 ? (
                         statuses.map(s => (
@@ -1404,11 +1414,11 @@ export default function LeadsClient({
                   </div>
 
                   {userRole === 'Super Admin' && (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1.5">
                       {lead.phone && (
                         <button
                           onClick={() => openWhatsappHistory(lead)}
-                          className="text-green-600 hover:text-green-700 bg-green-50 p-2 rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
+                          className="text-green-600 hover:text-green-700 bg-green-50 active:bg-green-100 p-2.5 rounded-xl min-h-[40px] min-w-[40px] flex items-center justify-center transition-colors cursor-pointer"
                           title="WhatsApp History"
                           aria-label="WhatsApp History"
                         >
@@ -1417,7 +1427,7 @@ export default function LeadsClient({
                       )}
                       <button 
                         onClick={() => openEditModal(lead)} 
-                        className="text-[#1e3a5f] hover:text-[#0f1d33] p-2 hover:bg-[#f3f5f8] rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
+                        className="text-[#1e3a5f] hover:text-[#0f1d33] p-2.5 hover:bg-[#f3f5f8] active:bg-[#e8ecf2] rounded-xl min-h-[40px] min-w-[40px] flex items-center justify-center transition-colors cursor-pointer"
                         title="Edit Lead"
                         aria-label="Edit Lead"
                       >
@@ -1425,7 +1435,7 @@ export default function LeadsClient({
                       </button>
                       <button 
                         onClick={() => handleDelete(lead)} 
-                        className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
+                        className="text-red-500 hover:text-red-700 p-2.5 hover:bg-red-50 active:bg-red-100 rounded-xl min-h-[40px] min-w-[40px] flex items-center justify-center transition-colors cursor-pointer"
                         title="Delete Lead"
                         aria-label="Delete Lead"
                       >

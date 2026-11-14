@@ -26,7 +26,10 @@ import {
   HelpCircle,
   Sparkles,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Calendar,
+  ChevronDown,
+  Hash
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -38,7 +41,9 @@ import {
   checkMetaDiagnostics,
   syncProjectMetaForms,
   syncHistoricalMetaLeads,
-  disconnectMetaIntegration
+  disconnectMetaIntegration,
+  getProjectMetaForms,
+  addManualMetaForm
 } from './actions'
 
 interface ProjectsClientProps {
@@ -79,6 +84,16 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
   const [isSyncingForms, setIsSyncingForms] = useState(false)
   const [isSyncingLeads, setIsSyncingLeads] = useState(false)
   const [activeTab, setActiveTab] = useState<'diagnostics' | 'forms' | 'guide'>('diagnostics')
+
+  // Forms & Historical Sync State
+  const [projectForms, setProjectForms] = useState<any[]>([])
+  const [isLoadingForms, setIsLoadingForms] = useState(false)
+  const [selectedFormId, setSelectedFormId] = useState<string>('all')
+  const [selectedDaysBack, setSelectedDaysBack] = useState<number>(30)
+  const [showManualFormInput, setShowManualFormInput] = useState(false)
+  const [manualFormId, setManualFormId] = useState('')
+  const [manualFormName, setManualFormName] = useState('')
+  const [isAddingManualForm, setIsAddingManualForm] = useState(false)
 
   // Filter projects by search query
   const filteredProjects = useMemo(() => {
@@ -233,6 +248,16 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
     window.open(url, '_blank')
   }
 
+  // Load project forms
+  const loadProjectForms = async (projectId: string) => {
+    setIsLoadingForms(true)
+    const res = await getProjectMetaForms(projectId)
+    setIsLoadingForms(false)
+    if (res.success) {
+      setProjectForms(res.forms || [])
+    }
+  }
+
   // Open Diagnostics Drawer
   const handleOpenDiagnostics = async (project: ProjectRecord) => {
     setDiagnosticsProject(project)
@@ -240,8 +265,13 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
     setActiveTab('diagnostics')
     setIsLoadingDiagnostics(true)
 
-    const res = await checkMetaDiagnostics(project.id)
-    setDiagnosticsData(res)
+    // Load diagnostics and forms simultaneously
+    const [diagRes] = await Promise.all([
+      checkMetaDiagnostics(project.id),
+      loadProjectForms(project.id)
+    ])
+
+    setDiagnosticsData(diagRes)
     setIsLoadingDiagnostics(false)
   }
 
@@ -254,6 +284,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
 
     if (res.success) {
       toast.success(`Discovered ${res.count} active lead forms from Facebook!`)
+      await loadProjectForms(diagnosticsProject.id)
       // Refresh diagnostics
       const updated = await checkMetaDiagnostics(diagnosticsProject.id)
       setDiagnosticsData(updated)
@@ -262,17 +293,45 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
     }
   }
 
-  // Pull Past Historical Leads
+  // Pull Past Historical Leads with Dropdown Selection (Form + Days Back)
   const handleSyncPastLeads = async () => {
     if (!diagnosticsProject) return
     setIsSyncingLeads(true)
-    const res = await syncHistoricalMetaLeads(diagnosticsProject.id)
+    const formIdToSync = selectedFormId === 'all' ? undefined : selectedFormId
+    const res = await syncHistoricalMetaLeads(diagnosticsProject.id, formIdToSync, selectedDaysBack)
     setIsSyncingLeads(false)
 
     if (res.success) {
       toast.success(res.message || 'Historical leads imported successfully!')
+      await loadProjectForms(diagnosticsProject.id)
+      const updated = await checkMetaDiagnostics(diagnosticsProject.id)
+      setDiagnosticsData(updated)
     } else {
       toast.error(res.error || 'Failed to pull historical leads')
+    }
+  }
+
+  // Add Manual Meta Form ID
+  const handleAddManualForm = async () => {
+    if (!diagnosticsProject || !manualFormId.trim()) {
+      toast.error('Please enter a valid Facebook Form ID')
+      return
+    }
+    setIsAddingManualForm(true)
+    const res = await addManualMetaForm(diagnosticsProject.id, manualFormId, manualFormName)
+    setIsAddingManualForm(false)
+
+    if (res.success) {
+      toast.success('Form ID added and registered successfully!')
+      setManualFormId('')
+      setManualFormName('')
+      setShowManualFormInput(false)
+      setSelectedFormId(manualFormId.trim())
+      await loadProjectForms(diagnosticsProject.id)
+      const updated = await checkMetaDiagnostics(diagnosticsProject.id)
+      setDiagnosticsData(updated)
+    } else {
+      toast.error(res.error || 'Failed to add manual form ID')
     }
   }
 
@@ -769,39 +828,247 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
 
                 {/* TAB 2: FORMS & HISTORICAL PULL */}
                 {activeTab === 'forms' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="space-y-5">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <h4 className="text-sm font-bold text-[#0f1d33]">Active Lead Gen Forms</h4>
-                        <p className="text-xs text-[#5a6a82]">Forms discovered directly from Facebook Ads Manager.</p>
+                        <h4 className="text-sm font-bold text-[#0f1d33] flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-[#1877f2]" />
+                          Active Lead Gen Forms & Historical Pull
+                        </h4>
+                        <p className="text-xs text-[#5a6a82]">
+                          Manage Facebook & Instagram forms, select date ranges, and pull past leads directly into CRM.
+                        </p>
                       </div>
                       <button
                         type="button"
                         disabled={isSyncingForms}
                         onClick={handleSyncForms}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#0f1d33] rounded-lg hover:bg-[#1a2d4c] transition-colors cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#0f1d33] rounded-lg hover:bg-[#1a2d4c] transition-colors cursor-pointer disabled:opacity-50 shrink-0 self-start sm:self-auto"
                       >
                         {isSyncingForms ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                         Refresh Forms from Meta
                       </button>
                     </div>
 
-                    <div className="rounded-xl border border-[#e8ecf2] bg-[#fbfcfd] p-4 flex items-center justify-between">
-                      <div>
-                        <h5 className="text-xs font-bold text-[#0f1d33]">Historical Lead Recovery</h5>
-                        <p className="text-[11px] text-[#5a6a82]">
-                          Pull all past leads submitted in the last 30 days that haven't been ingested yet.
-                        </p>
+                    {/* Historical Lead Sync Card with Dropdown Selectors */}
+                    <div className="rounded-xl border border-[#c7d9f8] bg-gradient-to-br from-[#f0f6ff] to-[#f8fafd] p-4 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-[#1877f2]">
+                            <Sparkles className="w-4 h-4" />
+                            <span>Historical Lead Ingestion Engine</span>
+                          </div>
+                          <p className="text-xs text-[#475569]">
+                            Select a specific lead form and date range to pull existing leads that were submitted before webhook connection.
+                          </p>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        disabled={isSyncingLeads}
-                        onClick={handleSyncPastLeads}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-[#1877f2] rounded-lg hover:bg-[#166fe5] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-                      >
-                        {isSyncingLeads ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                        Sync Past Leads (Last 30 Days)
-                      </button>
+
+                      {/* Dropdown Selectors Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        {/* 1. Form Dropdown Selector */}
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-[#0f1d33] uppercase tracking-wider flex items-center gap-1">
+                            <Layers className="w-3.5 h-3.5 text-[#5a6a82]" />
+                            Target Lead Form
+                          </label>
+                          <select
+                            value={selectedFormId}
+                            onChange={(e) => setSelectedFormId(e.target.value)}
+                            className="w-full px-3 py-2 text-xs bg-white border border-[#cbd5e1] rounded-lg text-[#0f1d33] font-medium focus:outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] cursor-pointer"
+                          >
+                            <option value="all">
+                              ⚡ All Active Forms ({projectForms.length} synced)
+                            </option>
+                            {projectForms.map((f) => (
+                              <option key={f.form_id} value={f.form_id}>
+                                {f.form_name || f.name || f.form_id} (ID: {f.form_id})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 2. Date Range Dropdown Selector */}
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-[#0f1d33] uppercase tracking-wider flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-[#5a6a82]" />
+                            Date Range Backfill
+                          </label>
+                          <select
+                            value={selectedDaysBack}
+                            onChange={(e) => setSelectedDaysBack(Number(e.target.value))}
+                            className="w-full px-3 py-2 text-xs bg-white border border-[#cbd5e1] rounded-lg text-[#0f1d33] font-medium focus:outline-none focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] cursor-pointer"
+                          >
+                            <option value={30}>📅 Last 30 Days (Recommended)</option>
+                            <option value={7}>📅 Last 7 Days (Past Week)</option>
+                            <option value={14}>📅 Last 14 Days (Past 2 Weeks)</option>
+                            <option value={60}>📅 Last 60 Days (Past 2 Months)</option>
+                            <option value={90}>📅 Last 90 Days (Meta API Maximum)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Pull Action Button */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-[#dbe6f8]">
+                        <p className="text-[11px] text-[#64748b]">
+                          Duplicates are skipped automatically based on lead phone numbers and Meta Lead IDs.
+                        </p>
+                        <button
+                          type="button"
+                          disabled={isSyncingLeads || (projectForms.length === 0 && selectedFormId === 'all')}
+                          onClick={handleSyncPastLeads}
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#1877f2] hover:bg-[#166fe5] rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        >
+                          {isSyncingLeads ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Pulling Leads from Meta...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4" />
+                              <span>Pull Past Leads (Last {selectedDaysBack} Days)</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Forms Table / Cards */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-xs font-bold text-[#0f1d33] uppercase tracking-wider">
+                          Discovered Forms ({projectForms.length})
+                        </h5>
+                        <button
+                          type="button"
+                          onClick={() => setShowManualFormInput(!showManualFormInput)}
+                          className="text-xs font-semibold text-[#1877f2] hover:underline cursor-pointer"
+                        >
+                          {showManualFormInput ? 'Cancel Manual Add' : '+ Add Form ID Manually'}
+                        </button>
+                      </div>
+
+                      {/* Manual Form Input Drawer */}
+                      {showManualFormInput && (
+                        <div className="p-3.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-3">
+                          <p className="text-xs text-[#475569]">
+                            If your client gave you a specific Form ID from Meta Ads Manager, enter it below to register it:
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={manualFormId}
+                              onChange={(e) => setManualFormId(e.target.value)}
+                              placeholder="Facebook Form ID (e.g. 192837465019283)"
+                              className="px-3 py-1.5 text-xs bg-white border border-[#cbd5e1] rounded-lg text-[#0f1d33] focus:outline-none focus:border-[#0f1d33]"
+                            />
+                            <input
+                              type="text"
+                              value={manualFormName}
+                              onChange={(e) => setManualFormName(e.target.value)}
+                              placeholder="Form Label (e.g. 3BHK Luxury Inquiry)"
+                              className="px-3 py-1.5 text-xs bg-white border border-[#cbd5e1] rounded-lg text-[#0f1d33] focus:outline-none focus:border-[#0f1d33]"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowManualFormInput(false)}
+                              className="px-3 py-1 text-xs text-[#64748b] hover:text-[#0f1d33]"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isAddingManualForm || !manualFormId.trim()}
+                              onClick={handleAddManualForm}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-white bg-[#0f1d33] rounded-lg hover:bg-[#1a2d4c] disabled:opacity-50 cursor-pointer"
+                            >
+                              {isAddingManualForm ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                              Save & Register Form
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Forms List */}
+                      {isLoadingForms ? (
+                        <div className="py-8 text-center text-xs text-[#64748b] flex flex-col items-center justify-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-[#0f1d33]" />
+                          <span>Loading active forms...</span>
+                        </div>
+                      ) : projectForms.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-[#cbd5e1] p-6 text-center space-y-2">
+                          <div className="w-9 h-9 rounded-full bg-[#f1f5f9] flex items-center justify-center mx-auto text-[#64748b]">
+                            <Layers className="w-5 h-5" />
+                          </div>
+                          <p className="text-xs font-semibold text-[#0f1d33]">No lead forms discovered yet</p>
+                          <p className="text-[11px] text-[#64748b] max-w-sm mx-auto">
+                            Click <strong>"Refresh Forms from Meta"</strong> above to auto-detect forms from the connected page, or add your Form ID manually.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {projectForms.map((form) => (
+                            <div
+                              key={form.form_id}
+                              className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
+                                selectedFormId === form.form_id
+                                  ? 'border-[#1877f2] bg-[#f0f6ff]/40 shadow-xs'
+                                  : 'border-[#e8ecf2] bg-white hover:bg-[#fbfcfd]'
+                              }`}
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-[#0f1d33]">
+                                    {form.form_name || form.name || 'Meta Ad Form'}
+                                  </span>
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    {form.status || 'ACTIVE'}
+                                  </span>
+                                  {selectedFormId === form.form_id && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1877f2] text-white">
+                                      Selected for Pull
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-[11px] text-[#64748b]">
+                                  <span className="font-mono">ID: {form.form_id}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(form.form_id)
+                                      toast.success('Form ID copied!')
+                                    }}
+                                    className="hover:text-[#0f1d33] cursor-pointer"
+                                    title="Copy Form ID"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                  {typeof form.leads_count === 'number' && (
+                                    <span>&bull; {form.leads_count} leads pulled</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedFormId(form.form_id)
+                                    toast.info(`Selected "${form.form_name || form.form_id}" for historical pull`)
+                                  }}
+                                  className="px-2.5 py-1 text-xs font-semibold text-[#0f1d33] bg-[#f1f5f9] hover:bg-[#e2e8f0] rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Select Form
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

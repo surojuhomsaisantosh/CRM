@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from "./dashboard/Sidebar"
 import { createClient } from "@/lib/supabase/client"
-import { Building2, Menu, X } from "lucide-react"
+import { Building2, Menu, X, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -87,7 +87,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pt-20 md:pt-8 w-full flex flex-col min-h-0 relative">
         <div className="mx-auto max-w-7xl w-full flex-1 flex flex-col min-h-0">
-          {children}
+          {isNavigating ? (
+            <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white border border-[#e8ecf2] shadow-sm">
+                <Loader2 className="h-6 w-6 animate-spin text-[#0f1d33]" />
+              </div>
+              <p className="text-xs font-semibold text-[#5a6a82]">Loading content...</p>
+            </div>
+          ) : (
+            children
+          )}
         </div>
       </main>
     </div>

@@ -190,33 +190,36 @@ export async function editAdminUser(formData: FormData) {
 export async function getRoles() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!supabaseUrl) {
-    return {
-      data: [
-        { id: 'role-super-admin', name: 'Super Admin' },
-        { id: 'role-admin', name: 'Admin' },
-        { id: 'role-telecaller', name: 'Telecaller' }
-      ],
-      error: null
-    }
+    return { data: [], error: null }
   }
 
-  const supabaseAdmin = getAdminClient()
-  const { data, error } = await supabaseAdmin
-    .from('roles')
-    .select('id, name')
-    .order('created_at', { ascending: true })
+  try {
+    const supabaseAdmin = getAdminClient()
+    const { data, error } = await supabaseAdmin
+      .from('roles')
+      .select('id, name')
+      .order('created_at', { ascending: true })
 
-  if (error) {
-    return {
-      data: [
-        { id: 'role-super-admin', name: 'Super Admin' },
-        { id: 'role-admin', name: 'Admin' },
-        { id: 'role-telecaller', name: 'Telecaller' }
-      ],
-      error: null
+    if (error) {
+      // If roles table doesn't exist yet, extract existing roles from profiles without mock fallback
+      const { data: profileRoles } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+
+      if (profileRoles && profileRoles.length > 0) {
+        const unique = Array.from(new Set(profileRoles.map((p: any) => p.role).filter(Boolean)))
+        return {
+          data: unique.map((name, idx) => ({ id: `role-${idx}`, name })),
+          error: null
+        }
+      }
+      return { data: [], error: null }
     }
+    return { data: data || [], error: null }
+  } catch (err: any) {
+    console.error('Error fetching roles:', err)
+    return { data: [], error: null }
   }
-  return { data, error: null }
 }
 
 export async function addRole(name: string) {

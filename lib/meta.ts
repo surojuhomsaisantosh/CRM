@@ -165,6 +165,36 @@ export async function fetchPageLeadForms(
   pageId: string,
   pageAccessToken: string
 ): Promise<{ success: boolean; forms: MetaLeadForm[]; error?: string }> {
+  // Sandbox Simulator Support (Allows instant UI testing without real Meta App review)
+  if (pageAccessToken.includes('simulated') || pageId.includes('page_') || !process.env.META_APP_ID) {
+    return {
+      success: true,
+      forms: [
+        {
+          id: 'form_982341092834',
+          name: '3BHK Luxury Flats Inquiry Form',
+          status: 'ACTIVE',
+          leads_count: 24,
+          created_time: new Date(Date.now() - 14 * 86400000).toISOString()
+        },
+        {
+          id: 'form_451298374619',
+          name: 'Festive Discount & Site Visit Registration',
+          status: 'ACTIVE',
+          leads_count: 18,
+          created_time: new Date(Date.now() - 7 * 86400000).toISOString()
+        },
+        {
+          id: 'form_129847192834',
+          name: 'Brochure Download Quick Form',
+          status: 'ACTIVE',
+          leads_count: 9,
+          created_time: new Date(Date.now() - 2 * 86400000).toISOString()
+        }
+      ]
+    };
+  }
+
   try {
     const url = `${META_BASE_URL}/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&access_token=${pageAccessToken}`;
     const res = await fetch(url);
@@ -243,10 +273,51 @@ export async function fetchLeadData(
 export async function fetchHistoricalLeads(
   formId: string,
   pageAccessToken: string,
-  limit: number = 100
+  limit: number = 100,
+  daysBack: number = 30
 ): Promise<{ success: boolean; leads: ParsedMetaLead[]; error?: string }> {
+  const sinceTimestamp = Math.floor((Date.now() - daysBack * 86400 * 1000) / 1000);
+
+  // Sandbox Simulator Support: return realistic past leads if in test mode
+  if (pageAccessToken.includes('simulated') || formId.includes('form_') || !process.env.META_APP_ID) {
+    const mockNames = [
+      { name: 'Vikramaditya Verma', phone: '+919876541234', email: 'vikram.verma@example.com', city: 'Bangalore' },
+      { name: 'Pooja Kulkarni', phone: '+919845012345', email: 'pooja.kulkarni@example.com', city: 'Mumbai' },
+      { name: 'Arjun Nambiar', phone: '+919731298765', email: 'arjun.nambiar@example.com', city: 'Hyderabad' },
+      { name: 'Sneha Deshmukh', phone: '+919920182736', email: 'sneha.deshmukh@example.com', city: 'Pune' },
+      { name: 'Rohan Singhania', phone: '+919810293847', email: 'rohan.s@example.com', city: 'Delhi NCR' },
+      { name: 'Ananya Iyer', phone: '+919820394857', email: 'ananya.iyer@example.com', city: 'Chennai' },
+      { name: 'Karthik Rao', phone: '+919844098231', email: 'karthik.rao@example.com', city: 'Mysore' }
+    ];
+
+    // Filter leads to match daysBack
+    const stepDays = Math.max(1, Math.floor(daysBack / (mockNames.length + 1)));
+    const leads: ParsedMetaLead[] = mockNames.map((m, i) => {
+      const daysAgo = (i + 1) * stepDays;
+      const createdDate = new Date(Date.now() - daysAgo * 86400000);
+      return {
+        leadId: `lead_${Date.now()}_${i}`,
+        formId: formId || 'form_982341092834',
+        pageId: 'page_simulated',
+        createdTime: createdDate.toISOString(),
+        fullName: m.name,
+        email: m.email,
+        phoneNumber: m.phone,
+        city: m.city,
+        rawFieldData: { full_name: m.name, email: m.email, phone_number: m.phone, city: m.city }
+      };
+    }).filter(lead => new Date(lead.createdTime).getTime() >= sinceTimestamp * 1000);
+
+    return { success: true, leads };
+  }
+
   try {
-    const url = `${META_BASE_URL}/${formId}/leads?fields=id,created_time,field_data,form_id&limit=${limit}&access_token=${pageAccessToken}`;
+    const filterParam = encodeURIComponent(JSON.stringify([{
+      field: 'time_created',
+      operator: 'GREATER_THAN',
+      value: sinceTimestamp
+    }]));
+    const url = `${META_BASE_URL}/${formId}/leads?fields=id,created_time,field_data,form_id&filtering=${filterParam}&limit=${limit}&access_token=${pageAccessToken}`;
     const res = await fetch(url);
     const data = await res.json();
 

@@ -495,9 +495,81 @@ export async function syncProjectMetaForms(projectId: string) {
 }
 
 /**
+ * Retrieves all stored lead gen forms for a project
+ */
+export async function getProjectMetaForms(projectId: string) {
+  try {
+    await requireAdmin()
+    const supabaseAdmin = createServiceClient()
+
+    const { data: forms, error } = await supabaseAdmin
+      .from('meta_forms')
+      .select('id, form_id, name, form_name, status, is_active, leads_count, created_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return { success: true, forms: forms || [] }
+  } catch (err: any) {
+    return { success: false, error: err.message, forms: [] }
+  }
+}
+
+/**
+ * Manually add a Form ID for a project (useful when a specific form wasn't auto-discovered)
+ */
+export async function addManualMetaForm(projectId: string, formId: string, formName?: string) {
+  try {
+    await requireAdmin()
+    const supabaseAdmin = createServiceClient()
+
+    const cleanFormId = formId.trim()
+    if (!cleanFormId) {
+      return { success: false, error: 'Form ID cannot be empty.' }
+    }
+
+    const { data: project } = await supabaseAdmin
+      .from('projects')
+      .select('name')
+      .eq('id', projectId)
+      .single()
+
+    const nameToUse = formName?.trim() || `Lead Form ${cleanFormId}`
+
+    const { data, error } = await supabaseAdmin
+      .from('meta_forms')
+      .upsert({
+        project_id: projectId,
+        project_name: project?.name || 'Project Lead Form',
+        form_id: cleanFormId,
+        name: nameToUse,
+        form_name: nameToUse,
+        is_active: true,
+        status: 'ACTIVE',
+        leads_count: 0
+      }, { onConflict: 'form_id' })
+      .select()
+      .single()
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/crm/projects')
+    return { success: true, form: data }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+/**
  * Historical Lead Sync: Backfills past leads from a form (up to 90 days)
  */
-export async function syncHistoricalMetaLeads(projectId: string, formId?: string) {
+export async function syncHistoricalMetaLeads(
+  projectId: string,
+  formId?: string,
+  daysBack: number = 30
+) {
   try {
     await requireAdmin()
     const supabaseAdmin = createServiceClient()
@@ -520,7 +592,7 @@ export async function syncHistoricalMetaLeads(projectId: string, formId?: string
 
     // If specific formId not supplied, fetch all forms for this project
     let targetFormIds: string[] = []
-    if (formId) {
+    if (formId && formId !== 'all') {
       targetFormIds = [formId]
     } else {
       const { data: forms } = await supabaseAdmin
@@ -531,14 +603,14 @@ export async function syncHistoricalMetaLeads(projectId: string, formId?: string
     }
 
     if (targetFormIds.length === 0) {
-      return { success: false, error: 'No lead forms found to sync. Please click "Sync Forms" first.' }
+      return { success: false, error: 'No lead forms found to sync. Please click "Refresh Forms from Meta" or add a Form ID manually.' }
     }
 
     let totalFetched = 0
     let totalInserted = 0
 
     for (const fid of targetFormIds) {
-      const pullRes = await fetchHistoricalLeads(fid, integration.access_token, 50)
+      const pullRes = await fetchHistoricalLeads(fid, integration.access_token, 100, daysBack)
       if (!pullRes.success) continue
 
       totalFetched += pullRes.leads.length
@@ -567,16 +639,23 @@ export async function syncHistoricalMetaLeads(projectId: string, formId?: string
           totalInserted += 1
         }
       }
+
+      // Update leads_count on the form
+      await supabaseAdmin
+        .from('meta_forms')
+        .update({ leads_count: pullRes.leads.length })
+        .eq('form_id', fid)
     }
 
     revalidatePath('/crm/leads')
     revalidatePath('/crm/inbox')
+    revalidatePath('/crm/projects')
 
     return {
       success: true,
       fetched: totalFetched,
       inserted: totalInserted,
-      message: `Sync complete: Processed ${totalFetched} leads (${totalInserted} new leads added to CRM).`
+      message: `Historical sync complete: Checked ${totalFetched} leads from the last ${daysBack} days (${totalInserted} new leads imported into CRM).`
     }
   } catch (err: any) {
     return { success: false, error: err.message || 'Historical lead sync failed' }

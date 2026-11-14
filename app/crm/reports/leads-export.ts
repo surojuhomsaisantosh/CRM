@@ -1,6 +1,6 @@
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ExcelJS from 'exceljs';
 
 export interface ExportColumnDef {
   key: string;
@@ -21,22 +21,27 @@ export const EXPORTABLE_COLUMNS: ExportColumnDef[] = [
 ];
 
 export async function exportLeadsToCSV(leads: any[], columns: string[], fileName = 'leads_export.csv') {
-  const filtered = leads.map((lead) => {
-    const row: Record<string, any> = {};
-    columns.forEach((col) => {
-      row[col] = lead[col] ?? '';
-    });
-    return row;
+  const colDefs = columns.map((c) => EXPORTABLE_COLUMNS.find((def) => def.key === c)?.label || c);
+
+  // Build CSV header line
+  const headerLine = colDefs.map((label) => `"${String(label).replace(/"/g, '""')}"`).join(',');
+
+  // Build CSV data rows
+  const rowLines = leads.map((lead) => {
+    return columns
+      .map((col) => {
+        const val = lead[col] ?? '';
+        return `"${String(val).replace(/"/g, '""')}"`;
+      })
+      .join(',');
   });
 
-  const worksheet = XLSX.utils.json_to_sheet(filtered);
-  const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
-
-  const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
+  const csvContent = [headerLine, ...rowLines].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = fileName;
+  a.download = fileName.endsWith('.csv') ? fileName : `${fileName}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -47,19 +52,48 @@ export async function exportLeadsToExcel(
   fileName = 'leads_export.xlsx',
   sheetName = 'CRM Leads'
 ) {
-  const filtered = leads.map((lead) => {
-    const row: Record<string, any> = {};
-    columns.forEach((col) => {
-      const colDef = EXPORTABLE_COLUMNS.find((c) => c.key === col);
-      row[colDef?.label || col] = lead[col] ?? '';
-    });
-    return row;
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
+
+  // Set columns with automatic sizing
+  worksheet.columns = columns.map((col) => {
+    const colDef = EXPORTABLE_COLUMNS.find((c) => c.key === col);
+    const headerTitle = colDef?.label || col;
+    return {
+      header: headerTitle,
+      key: col,
+      width: Math.max(headerTitle.length + 4, 18),
+    };
   });
 
-  const worksheet = XLSX.utils.json_to_sheet(filtered);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFile(workbook, fileName);
+  // Style header row (Navy branding with white bold text)
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF0F1D33' },
+  };
+
+  // Add lead rows
+  leads.forEach((lead) => {
+    const rowData: Record<string, any> = {};
+    columns.forEach((col) => {
+      rowData[col] = lead[col] ?? '';
+    });
+    worksheet.addRow(rowData);
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export interface PdfExportOptions {

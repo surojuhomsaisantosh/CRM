@@ -110,6 +110,6 @@ git merge develop
 ---
 
 ## 4. Requirements & Documentation Alignment
-- Any new requirement requested by the user must be logged into [requirement/PROJECT_REQUIREMENTS.md](file:///Users/surojuhomsaisantosh/Documents/PROJECTS/UNIVERSAL%20CRM%20/requirement/PROJECT_REQUIREMENTS.md).
-- Any database schema changes must be documented and updated in [requirement/supabase_schema.sql](file:///Users/surojuhomsaisantosh/Documents/PROJECTS/UNIVERSAL%20CRM%20/requirement/supabase_schema.sql).
-- **Daily Change Log Policy:** Maintain exactly **one markdown file per day** named `YYYY-MM-DD.md` in the `changelog/` folder (which is git-ignored). Each day's file records multiple chronological entries in plain English with timestamps.
+- Any new requirement requested by the user must be logged into [A_Requirements/PROJECT_REQUIREMENTS.md](file:///Users/surojuhomsaisantosh/Documents/PROJECTS/UNIVERSAL%20CRM%20/A_Requirements/PROJECT_REQUIREMENTS.md).
+- Any database schema changes must be documented and updated in [A_Requirements/supabase_schema.sql](file:///Users/surojuhomsaisantosh/Documents/PROJECTS/UNIVERSAL%20CRM%20/A_Requirements/supabase_schema.sql).
+- **Daily Change Log Policy:** Maintain exactly **one markdown file per day** named `YYYY-MM-DD.md` in the `A_Changelog/` folder (which is git-ignored). Each day's file records multiple chronological entries in plain English with timestamps.

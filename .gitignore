@@ -429,6 +429,7 @@ FodyWeavers.xsd
 
 # Local backups
 backup/
+A_Backup/
 (CRM_SOFTWARE)/
 
 # Environment secrets
@@ -442,3 +443,4 @@ node_modules/
 # Changelog folder (local tracking)
 changelog/
 change_log/
+A_Changelog/

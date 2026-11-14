@@ -1,8 +1,36 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Inbox, Download, X, ArrowRight, Clock, MessageSquare, Phone, Mail, Building, FileText } from 'lucide-react'
+import { 
+  Inbox, 
+  Download, 
+  X, 
+  ArrowRight, 
+  Clock, 
+  MessageSquare, 
+  Phone, 
+  Mail, 
+  Building, 
+  FileText,
+  FolderKanban,
+  ChevronDown,
+  FilterX
+} from 'lucide-react'
 import { getWhatsappLeadsWithActivity } from './actions'
+
+export interface InboxProject {
+  id: string
+  name: string
+  client_name?: string
+}
+
+export interface InboxForm {
+  id: string
+  form_id: string
+  name: string
+  project_id?: string
+  project_name?: string
+}
 
 const extractIncomingMessage = (details: string) => {
   if (!details) return '(no text content)';
@@ -125,16 +153,24 @@ const extractLeadMessageText = (lead: any) => {
 export default function WhatsappDashboardClient({ 
   initialLeads, 
   totalCount = 0, 
-  userRole 
+  userRole,
+  projects = [],
+  forms = []
 }: { 
   initialLeads: any[], 
   totalCount?: number, 
   initialAnalytics?: any,
-  userRole: string 
+  userRole: string,
+  projects?: InboxProject[],
+  forms?: InboxForm[]
 }) {
   const [leads, setLeads] = useState(initialLeads)
   const [selectedLead, setSelectedLead] = useState<any | null>(null)
   
+  // Filter States
+  const [selectedProject, setSelectedProject] = useState<string>('all')
+  const [selectedForm, setSelectedForm] = useState<string>('all')
+
   const [currentPage, setCurrentPage] = useState(1)
   const [totalLeadsCount, setTotalLeadsCount] = useState(totalCount || initialLeads.length)
   const [isPageLoading, setIsPageLoading] = useState(false)
@@ -142,6 +178,91 @@ export default function WhatsappDashboardClient({
   const pageSize = 50
   
   const chatScrollRef = useRef<HTMLDivElement>(null)
+
+  // Dynamic available forms list
+  const availableForms = useMemo(() => {
+    const map = new Map<string, { id: string; form_id: string; name: string; project_name?: string }>();
+    
+    // 1. Registered forms from meta_forms
+    forms.forEach(f => {
+      if (f.form_id) {
+        map.set(f.form_id, {
+          id: f.id,
+          form_id: f.form_id,
+          name: f.name || `Form ${f.form_id}`,
+          project_name: f.project_name
+        });
+      }
+    });
+
+    // 2. Any additional form IDs found in leads
+    leads.forEach(l => {
+      const fInfo = extractFormDetails(l);
+      if (fInfo.id && fInfo.id !== '-' && !map.has(fInfo.id)) {
+        map.set(fInfo.id, {
+          id: fInfo.id,
+          form_id: fInfo.id,
+          name: fInfo.name !== '-' ? fInfo.name : `Form ${fInfo.id}`,
+          project_name: l.project || l.property_interest
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [forms, leads]);
+
+  // Filter forms based on selected project
+  const filteredForms = useMemo(() => {
+    if (selectedProject === 'all') return availableForms;
+    return availableForms.filter(f => 
+      !f.project_name || f.project_name.toLowerCase() === selectedProject.toLowerCase()
+    );
+  }, [availableForms, selectedProject]);
+
+  const applyFilters = async (project: string, formId: string) => {
+    setIsPageLoading(true);
+    isPageLoadingRef.current = true;
+    try {
+      const res = await getWhatsappLeadsWithActivity(1, pageSize, {
+        project: project !== 'all' ? project : undefined,
+        formId: formId !== 'all' ? formId : undefined
+      });
+      setLeads(res.data || []);
+      setTotalLeadsCount(res.count || 0);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error('Error filtering inbox leads:', err);
+    } finally {
+      isPageLoadingRef.current = false;
+      setIsPageLoading(false);
+    }
+  };
+
+  const handleProjectChange = (newProject: string) => {
+    setSelectedProject(newProject);
+    let newForm = selectedForm;
+    if (newProject !== 'all' && selectedForm !== 'all') {
+      const formMatches = availableForms.some(
+        f => f.form_id === selectedForm && (!f.project_name || f.project_name.toLowerCase() === newProject.toLowerCase())
+      );
+      if (!formMatches) {
+        newForm = 'all';
+        setSelectedForm('all');
+      }
+    }
+    applyFilters(newProject, newForm);
+  };
+
+  const handleFormChange = (newForm: string) => {
+    setSelectedForm(newForm);
+    applyFilters(selectedProject, newForm);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedProject('all');
+    setSelectedForm('all');
+    applyFilters('all', 'all');
+  };
 
   useEffect(() => {
     if (selectedLead && chatScrollRef.current) {
@@ -182,9 +303,12 @@ export default function WhatsappDashboardClient({
     isPageLoadingRef.current = true;
     setIsPageLoading(true);
     try {
-      const res = await getWhatsappLeadsWithActivity(newPage, pageSize);
-      setLeads(res.data);
-      setTotalLeadsCount(res.count);
+      const res = await getWhatsappLeadsWithActivity(newPage, pageSize, {
+        project: selectedProject !== 'all' ? selectedProject : undefined,
+        formId: selectedForm !== 'all' ? selectedForm : undefined
+      });
+      setLeads(res.data || []);
+      setTotalLeadsCount(res.count || 0);
       setCurrentPage(newPage);
     } catch (err) {
       console.error('Error fetching leads:', err);
@@ -221,7 +345,7 @@ export default function WhatsappDashboardClient({
         `"${(lead.name || '').replace(/"/g, '""')}"`,
         `"${(lead.phone || '').replace(/"/g, '""')}"`,
         `"${(lead.email || '').replace(/"/g, '""')}"`,
-        `"${(lead.project || '-').replace(/"/g, '""')}"`,
+        `"${(lead.project || lead.property_interest || '-').replace(/"/g, '""')}"`,
         `"${(lead.formId || '-').replace(/"/g, '""')}"`,
         `"${(lead.formName || '-').replace(/"/g, '""')}"`,
         `"${(lead.messageText || '-').replace(/"/g, '""')}"`,
@@ -268,6 +392,79 @@ export default function WhatsappDashboardClient({
 
       {/* Main Inbox Table Container */}
       <div className="flex-1 px-4 md:px-8 pb-4 md:pb-8 flex flex-col min-h-0">
+        {/* Filter Bar (Reference from Lead Pipeline) */}
+        <div className="bg-white rounded-xl border border-[#e8ecf2] p-4 shadow-xs mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Select Project Dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#5a6a82] shrink-0 whitespace-nowrap select-none flex items-center gap-1.5">
+                <FolderKanban className="w-3.5 h-3.5 text-[#c4a55a]" />
+                Project:
+              </span>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={selectedProject}
+                  onChange={(e) => handleProjectChange(e.target.value)}
+                  className="appearance-none text-xs font-semibold bg-[#f3f5f8] border border-[#e8ecf2] text-[#0f1d33] rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-1 focus:ring-[#0f1d33] cursor-pointer hover:bg-[#e8ecf2] transition-colors"
+                >
+                  <option value="all">All Projects</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.name}>
+                      {p.name} {p.client_name ? `(${p.client_name})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-[#5a6a82] absolute right-2.5 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-5 bg-[#e8ecf2]" />
+
+            {/* Select Form Dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#5a6a82] shrink-0 whitespace-nowrap select-none flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-[#1e3a5f]" />
+                Form:
+              </span>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={selectedForm}
+                  onChange={(e) => handleFormChange(e.target.value)}
+                  className="appearance-none text-xs font-semibold bg-[#f3f5f8] border border-[#e8ecf2] text-[#0f1d33] rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-1 focus:ring-[#0f1d33] cursor-pointer hover:bg-[#e8ecf2] transition-colors max-w-[240px] truncate"
+                >
+                  <option value="all">All Forms</option>
+                  {filteredForms.map((f) => (
+                    <option key={f.id || f.form_id} value={f.form_id}>
+                      {f.name} {f.form_id ? `(${f.form_id})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-[#5a6a82] absolute right-2.5 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {(selectedProject !== 'all' || selectedForm !== 'all') && (
+              <button
+                onClick={handleClearFilters}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors border border-red-200 cursor-pointer"
+                title="Reset project and form filters"
+              >
+                <FilterX className="w-3.5 h-3.5" />
+                Clear Filters
+              </button>
+            )}
+          </div>
+
+          {/* Showing X inquiries badge */}
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5a6a82] bg-[#f8fafc] px-3.5 py-2 rounded-lg border border-[#e8ecf2] shrink-0 self-start md:self-auto ml-auto">
+            <span>Showing</span>
+            <span className="font-bold text-[#0f1d33]">{totalLeadsCount}</span>
+            <span>{totalLeadsCount === 1 ? 'inbox inquiry' : 'inbox inquiries'}</span>
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl border border-[#e8ecf2] shadow-xs flex flex-col md:overflow-hidden h-auto md:h-full">
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-auto">

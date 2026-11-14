@@ -2,18 +2,51 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-export async function getWhatsappLeadsWithActivity(page: number = 1, limit: number = 50) {
+export async function getInboxFilterOptions() {
+  const supabase = await createClient()
+
+  const [{ data: projects }, { data: forms }] = await Promise.all([
+    supabase.from('projects').select('id, name, client_name').order('name', { ascending: true }),
+    supabase.from('meta_forms').select('id, form_id, name, project_id, project_name').order('name', { ascending: true })
+  ])
+
+  return {
+    projects: projects || [],
+    forms: forms || []
+  }
+}
+
+export async function getWhatsappLeadsWithActivity(
+  page: number = 1,
+  limit: number = 50,
+  filters?: {
+    project?: string,
+    formId?: string
+  }
+) {
   const supabase = await createClient()
   const from = (page - 1) * limit
   const to = from + limit - 1
   
-  // Fetch inbox leads and join their activities
-  const { data, error, count } = await supabase
+  // Build query for inbox leads
+  let query = supabase
     .from('leads')
     .select(`
       *,
       lead_activities (*)
     `, { count: 'exact' })
+
+  // Apply project filter
+  if (filters?.project && filters.project !== 'all') {
+    query = query.eq('project', filters.project)
+  }
+
+  // Apply form filter (matches form_id column or source_page text)
+  if (filters?.formId && filters.formId !== 'all') {
+    query = query.or(`form_id.eq.${filters.formId},source_page.ilike.%${filters.formId}%`)
+  }
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to)
 
@@ -23,7 +56,7 @@ export async function getWhatsappLeadsWithActivity(page: number = 1, limit: numb
   }
 
   // Ensure activities are ordered by created_at ascending (chronological) for each lead
-  const formattedData = data.map((lead: any) => {
+  const formattedData = (data || []).map((lead: any) => {
     if (lead.lead_activities) {
       lead.lead_activities.sort((a: any, b: any) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()

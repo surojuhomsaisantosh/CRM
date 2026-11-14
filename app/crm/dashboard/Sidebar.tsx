@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { BrandLogo } from '@/app/crm/settings/brand-settings/BrandLogo';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -111,19 +110,11 @@ export function Sidebar({
         <Link
           href="/crm"
           onClick={onNavigate}
-          className="flex items-center gap-2.5 overflow-hidden transition-opacity hover:opacity-90"
+          className="flex items-center overflow-hidden transition-opacity hover:opacity-90"
         >
-          <BrandLogo size="md" />
-          {!isCollapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="text-base font-bold tracking-tight text-[#0f1d33] truncate">
-                C<span className="text-[#c4a55a]">RM</span>
-              </span>
-              <span className="text-[10px] uppercase font-semibold text-[#8a99ad] tracking-wider">
-                Enterprise Hub
-              </span>
-            </div>
-          )}
+          <span className={`${isCollapsed ? 'text-sm' : 'text-xl'} font-black tracking-wider text-black`}>
+            CRM
+          </span>
         </Link>
 
         {/* Collapse toggle button for desktop */}

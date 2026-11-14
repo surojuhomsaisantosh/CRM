@@ -448,3 +448,7 @@ A_Changelog/
 # Requirements & specifications
 requirement/
 A_Requirements/
+
+# Credentials & secrets
+A_Credential/
+credentials/

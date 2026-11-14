@@ -163,16 +163,25 @@ export function Sidebar({
 
       {/* Footer Profile & Logout */}
       <div className="p-3 border-t border-[#e8ecf2] bg-[#fafbfc]">
-        <div
-          className={`flex items-center gap-3 p-2 rounded-lg bg-white border border-[#e8ecf2] ${
-            isCollapsed ? 'justify-center' : 'justify-between'
-          }`}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#eef2f7] text-[#0f1d33] font-bold text-xs shrink-0">
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#eef2f7] text-[#0f1d33] font-bold text-xs shrink-0" title={userName || userEmail || 'User'}>
               {userName ? userName.charAt(0).toUpperCase() : (userEmail?.charAt(0).toUpperCase() || 'U')}
             </div>
-            {!isCollapsed && (
+            <button
+              onClick={handleLogout}
+              title="Log out"
+              className="p-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-md transition-colors shrink-0 shadow-2xs"
+            >
+              <LogOut className="w-4 h-4 text-red-600" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-white border border-[#e8ecf2]">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#eef2f7] text-[#0f1d33] font-bold text-xs shrink-0">
+                {userName ? userName.charAt(0).toUpperCase() : (userEmail?.charAt(0).toUpperCase() || 'U')}
+              </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-semibold text-[#0f1d33] truncate">
                   {userName || userEmail?.split('@')[0] || 'User'}
@@ -181,17 +190,18 @@ export function Sidebar({
                   {userRole}
                 </span>
               </div>
-            )}
-          </div>
+            </div>
 
-          <button
-            onClick={handleLogout}
-            title="Log out"
-            className="p-1.5 text-[#8a99ad] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors shrink-0"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+            <button
+              onClick={handleLogout}
+              title="Log out"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors shrink-0 shadow-2xs"
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-600" />
+              <span>Log out</span>
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

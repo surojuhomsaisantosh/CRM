@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { listAdminUsers, addAdminUser, deleteAdminUser, changeAdminPassword, toggleAdminStatus, editAdminUser, getRoles, addRole, deleteRole, deleteAndReassignRole, sendPasswordResetEmail } from './actions'
 import { Users, Loader2, Plus, Search, X, Eye, EyeOff, Shield, Trash2, Key, UserX, UserCheck, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
+import { PasswordChecklist } from '@/lib/auth/PasswordChecklist'
+import { validatePasswordPolicy } from '@/lib/auth/password-policy'
 
 type AdminUser = {
   id: string
@@ -55,6 +57,7 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
   // Password Modal State
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [newPasswordVal, setNewPasswordVal] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [isSendingReset, setIsSendingReset] = useState(false)
   const [passwordError, setPasswordError] = useState('')
@@ -254,6 +257,7 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
   const openPasswordModal = (userId: string) => {
     setSelectedUserId(userId)
     setPasswordError('')
+    setNewPasswordVal('')
     setShowPassword(false)
     setIsPasswordModalOpen(true)
   }
@@ -261,6 +265,7 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
   const closePasswordModal = () => {
     setIsPasswordModalOpen(false)
     setSelectedUserId(null)
+    setNewPasswordVal('')
   }
 
   const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -961,9 +966,12 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                       name="password"
                       id="new_password"
                       required
-                      minLength={6}
+                      minLength={12}
+                      maxLength={20}
+                      value={newPasswordVal}
+                      onChange={(e) => setNewPasswordVal(e.target.value)}
                       className="w-full rounded-lg border border-[#e8ecf2] bg-[#f3f5f8] px-3 py-2.5 pr-10 text-sm text-[#0f1d33] outline-none focus:border-[#1e3a5f]"
-                      placeholder="••••••••"
+                      placeholder="Enter new password (12-20 characters)"
                     />
                     <button
                       type="button"
@@ -973,6 +981,8 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {/* Live Password Requirements Checklist */}
+                  <PasswordChecklist password={newPasswordVal} className="mt-2" />
                 </div>
 
                 <div className="pt-2">
@@ -1003,7 +1013,7 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                   </button>
                   <button
                     type="submit"
-                    disabled={isChangingPassword}
+                    disabled={isChangingPassword || !validatePasswordPolicy(newPasswordVal).isValid}
                     className="inline-flex items-center justify-center rounded-lg bg-[#1e3a5f] px-4 py-2 text-sm font-medium text-white hover:bg-[#0f1d33] transition-colors disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {isChangingPassword ? (

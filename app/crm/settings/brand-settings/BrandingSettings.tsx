@@ -280,12 +280,10 @@ export default function BrandingSettings() {
         </div>
       </div>
 
-      {/* SECTION 1: UPLOAD LOGO (SINGLE LINE WITH UPLOAD & PREVIEW BUTTONS) */}
+      {/* SECTION 1: COMPANY LOGO */}
       <div>
         <div className="flex items-center justify-between gap-4 p-3.5 bg-[#f8fafc] border border-[#e8ecf2] rounded-xl">
-          <p className="text-xs sm:text-sm text-[#334155] font-medium leading-relaxed">
-            Upload here by clicking on the upload button and see the preview of the upload photo by clicking on the preview button.
-          </p>
+          <h3 className="text-sm font-bold text-[#0f1d33]">Company Logo</h3>
 
           <div className="flex items-center gap-2 shrink-0">
             <input
@@ -298,7 +296,8 @@ export default function BrandingSettings() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-lg shadow-xs hover:opacity-90 transition-all flex items-center gap-1.5"
+              title="Upload here by clicking on the upload button"
+              className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-lg shadow-xs hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer"
               style={{ backgroundColor: currentHex }}
             >
               <Upload size={14} />
@@ -309,8 +308,8 @@ export default function BrandingSettings() {
             <button
               type="button"
               onClick={() => setShowPreviewModal(true)}
-              title="Preview photo"
-              className="px-3 py-1.5 text-xs font-semibold text-[#0f1d33] hover:text-black bg-white hover:bg-[#edf2f7] border border-[#d5dce6] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+              title="See the preview of the upload photo by clicking on the preview button"
+              className="px-3 py-1.5 text-xs font-semibold text-[#0f1d33] hover:text-black bg-white hover:bg-[#edf2f7] border border-[#d5dce6] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <Eye size={14} />
               Preview
@@ -321,8 +320,8 @@ export default function BrandingSettings() {
               <button
                 type="button"
                 onClick={handleRemoveLogo}
-                title="Remove Custom Logo"
-                className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors flex items-center justify-center shadow-2xs"
+                title="Remove company logo"
+                className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors flex items-center justify-center shadow-2xs cursor-pointer"
               >
                 <Trash2 size={15} />
               </button>

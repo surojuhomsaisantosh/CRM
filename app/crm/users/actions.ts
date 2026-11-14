@@ -229,22 +229,43 @@ export async function sendPasswordResetEmail(email: string) {
 
   if (!email) return { error: 'Email is required' }
 
+  const cleanEmail = email.trim().toLowerCase()
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const redirectUrl = `${baseUrl}/auth/callback?next=/crm/reset-password`
+
+  const supabase = await createClient()
   const supabaseAdmin = getAdminClient()
-  const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/crm/login`
+
+  // 1. Generate direct 1-click password recovery action link via Admin Client
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'recovery',
-    email: email,
+    email: cleanEmail,
     options: {
-      redirectTo: loginUrl
+      redirectTo: redirectUrl
     }
   })
 
-  if (linkError || !linkData?.properties?.action_link) {
-    return { error: linkError?.message || 'Failed to generate reset link' }
+  const actionLink = linkData?.properties?.action_link || null
+
+  // 2. Dispatch real password reset email via Supabase Auth native delivery
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+    redirectTo: redirectUrl
+  })
+
+  // 3. If external Resend provider is configured, also dispatch via Resend
+  if (actionLink) {
+    await sendPasswordResetLink(cleanEmail, actionLink)
   }
 
-  await sendPasswordResetLink(email, linkData.properties.action_link)
-  return { success: true }
+  if (resetError && linkError) {
+    return { error: resetError?.message || linkError?.message || 'Failed to dispatch password reset email' }
+  }
+
+  return { 
+    success: true, 
+    resetLink: actionLink,
+    emailSent: !resetError 
+  }
 }
 
 export async function editAdminUser(formData: FormData) {

@@ -140,12 +140,18 @@ export async function createProject(formData: {
     const email = formData.email?.trim() || ''
     
     const phone_numbers = (formData.phone_numbers || [])
-      .map(p => p.trim())
+      .map(p => p.replace(/\D/g, '').slice(0, 10))
       .filter(Boolean)
       .slice(0, 5)
 
     if (!name) return { error: 'Project name is required' }
     if (!client_name) return { error: 'Client name is required' }
+
+    for (const phone of phone_numbers) {
+      if (phone.length !== 10) {
+        return { error: `Contact number "${phone}" must be exactly 10 digits` }
+      }
+    }
 
     const { data, error } = await supabase
       .from('projects')
@@ -191,12 +197,18 @@ export async function updateProject(
     const location = formData.location?.trim() || ''
     const email = formData.email?.trim() || ''
     const phone_numbers = (formData.phone_numbers || [])
-      .map(p => p.trim())
+      .map(p => p.replace(/\D/g, '').slice(0, 10))
       .filter(Boolean)
       .slice(0, 5)
 
     if (!name) return { error: 'Project name is required' }
     if (!client_name) return { error: 'Client name is required' }
+
+    for (const phone of phone_numbers) {
+      if (phone.length !== 10) {
+        return { error: `Contact number "${phone}" must be exactly 10 digits` }
+      }
+    }
 
     const { data, error } = await supabase
       .from('projects')

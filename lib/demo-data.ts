@@ -113,13 +113,13 @@ export const INITIAL_DEMO_LEADS: DemoLead[] = [
 ];
 
 export const INITIAL_DEMO_STATUSES = [
-  { id: 'st-1', name: 'New', color: '#3b82f6', is_default: true, sort_order: 1 },
-  { id: 'st-2', name: 'Contacted', color: '#f59e0b', is_default: false, sort_order: 2 },
-  { id: 'st-3', name: 'Qualified', color: '#10b981', is_default: false, sort_order: 3 },
-  { id: 'st-4', name: 'Site Visit', color: '#8b5cf6', is_default: false, sort_order: 4 },
-  { id: 'st-5', name: 'Negotiation', color: '#f97316', is_default: false, sort_order: 5 },
-  { id: 'st-6', name: 'Won', color: '#059669', is_default: false, sort_order: 6 },
-  { id: 'st-7', name: 'Lost', color: '#ef4444', is_default: false, sort_order: 7 },
+  { id: 'st-1', key: 'new', name: 'New', color: '#3b82f6', is_default: true, sort_order: 1 },
+  { id: 'st-2', key: 'contacted', name: 'Contacted', color: '#f59e0b', is_default: false, sort_order: 2 },
+  { id: 'st-3', key: 'qualified', name: 'Qualified', color: '#10b981', is_default: false, sort_order: 3 },
+  { id: 'st-4', key: 'site_visit', name: 'Site Visit', color: '#8b5cf6', is_default: false, sort_order: 4 },
+  { id: 'st-5', key: 'negotiation', name: 'Negotiation', color: '#f97316', is_default: false, sort_order: 5 },
+  { id: 'st-6', key: 'won', name: 'Won', color: '#059669', is_default: false, sort_order: 6 },
+  { id: 'st-7', key: 'lost', name: 'Lost', color: '#ef4444', is_default: false, sort_order: 7 },
 ];
 
 export const INITIAL_DEMO_PROJECTS = [

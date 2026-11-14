@@ -956,11 +956,12 @@ export default function LeadsClient({
               <div className="flex items-center gap-2 min-w-max py-0.5">
                 {/* Dynamic Status Pills from Database */}
                 {statuses.map((st: any) => {
-                  const isSelected = selectedStatus.toLowerCase() === st.key.toLowerCase()
+                  const sKey = (st.key || st.id || st.name || '').toString().toLowerCase();
+                  const isSelected = selectedStatus.toLowerCase() === sKey;
                   return (
                     <button
-                      key={st.id || st.key}
-                      onClick={() => setSelectedStatus(isSelected ? 'all' : st.key)}
+                      key={st.id || sKey}
+                      onClick={() => setSelectedStatus(isSelected ? 'all' : (st.key || sKey))}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border shrink-0 ${
                         isSelected
                           ? `${st.color_bg || 'bg-blue-50'} ${st.color_text || 'text-blue-700'} ${st.color_border || 'border-blue-300'} ring-2 ring-current/25 font-semibold shadow-xs`

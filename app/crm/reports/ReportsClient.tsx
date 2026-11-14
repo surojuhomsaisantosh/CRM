@@ -22,9 +22,10 @@ type Lead = {
   email: string
   phone: string | null
   status: string
-  source_page: string
-  project: string | null
-  downloaded_item: string | null
+  source_page?: string | null
+  project?: string | null
+  property_interest?: string | null
+  downloaded_item?: string | null
   created_at: string
 }
 
@@ -56,22 +57,9 @@ export default function ReportsClient({ initialLeads }: ReportsClientProps) {
     ].filter(item => item.value > 0)
   }, [metrics])
 
-  const sourceData = useMemo(() => {
-    const sources = initialLeads.reduce((acc, lead) => {
-      const source = lead.source_page || 'Unknown'
-      acc[source] = (acc[source] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    return Object.keys(sources).map(key => ({
-      name: key,
-      value: sources[key]
-    })).sort((a, b) => b.value - a.value)
-  }, [initialLeads])
-
   const projectData = useMemo(() => {
     const projects = initialLeads.reduce((acc, lead) => {
-      const project = lead.project || 'Unspecified'
+      const project = lead.project || lead.property_interest || 'Unspecified'
       acc[project] = (acc[project] || 0) + 1
       return acc
     }, {} as Record<string, number>)
@@ -79,20 +67,6 @@ export default function ReportsClient({ initialLeads }: ReportsClientProps) {
     return Object.keys(projects).map(key => ({
       name: key,
       value: projects[key]
-    })).sort((a, b) => b.value - a.value)
-  }, [initialLeads])
-
-  const downloadData = useMemo(() => {
-    const downloads = initialLeads.reduce((acc, lead) => {
-      if (lead.downloaded_item) {
-        acc[lead.downloaded_item] = (acc[lead.downloaded_item] || 0) + 1
-      }
-      return acc
-    }, {} as Record<string, number>)
-
-    return Object.keys(downloads).map(key => ({
-      name: key,
-      value: downloads[key]
     })).sort((a, b) => b.value - a.value)
   }, [initialLeads])
 
@@ -120,132 +94,47 @@ export default function ReportsClient({ initialLeads }: ReportsClientProps) {
         </p>
       </div>
 
-      {/* Metrics Cards */}
-      <div 
-        className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0" 
-        style={{ scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 #f1f5f9' }}
-      >
-        <div className="flex md:grid md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 min-w-max md:min-w-0">
-          <MetricCard 
-            title="Total Leads" 
-            value={metrics.total} 
-            icon={<Users className="w-5 h-5 text-[#1e3a5f]" />} 
-            bg="bg-[#f3f5f8]"
-            className="w-[160px] md:w-auto shrink-0 md:shrink"
-          />
-          <MetricCard 
-            title="New Leads" 
-            value={metrics.newLeads} 
-            icon={<TrendingUp className="w-5 h-5 text-blue-500" />} 
-            bg="bg-blue-50"
-            className="w-[160px] md:w-auto shrink-0 md:shrink"
-          />
-          <MetricCard 
-            title="Contacted" 
-            value={metrics.contacted} 
-            icon={<PhoneCall className="w-5 h-5 text-amber-500" />} 
-            bg="bg-amber-50"
-            className="w-[160px] md:w-auto shrink-0 md:shrink"
-          />
-          <MetricCard 
-            title="Qualified" 
-            value={metrics.qualified} 
-            icon={<UserCheck className="w-5 h-5 text-purple-500" />} 
-            bg="bg-purple-50"
-            className="w-[160px] md:w-auto shrink-0 md:shrink"
-          />
-          <MetricCard 
-            title="Closed" 
-            value={metrics.closed} 
-            icon={<CheckCircle className="w-5 h-5 text-emerald-500" />} 
-            bg="bg-emerald-50"
-            className="w-[160px] md:w-auto shrink-0 md:shrink"
-          />
-        </div>
+      {/* KPI Cards Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <MetricCard
+          title="Total Leads"
+          value={metrics.total}
+          icon={<Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />}
+          bg="bg-blue-50"
+        />
+        <MetricCard
+          title="New Leads"
+          value={metrics.newLeads}
+          icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#c4a55a]" />}
+          bg="bg-[#c4a55a]/10"
+        />
+        <MetricCard
+          title="Contacted"
+          value={metrics.contacted}
+          icon={<PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />}
+          bg="bg-indigo-50"
+        />
+        <MetricCard
+          title="Qualified"
+          value={metrics.qualified}
+          icon={<UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />}
+          bg="bg-emerald-50"
+        />
+        <MetricCard
+          title="Closed Deals"
+          value={metrics.closed}
+          icon={<CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />}
+          bg="bg-purple-50"
+          className="col-span-2 md:col-span-1"
+        />
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+      {/* Charts Grid: Leads by Project, Leads by Status, Leads Over Time */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         
-        {/* Status Distribution (Pie) */}
+        {/* Leads by Project (Bar) */}
         <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#e8ecf2] shadow-sm">
-          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Leads by Status</h3>
-          {statusData.length > 0 ? (
-            <div 
-              className="overflow-x-auto pb-2" 
-              style={{ scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 #f1f5f9' }}
-            >
-              <div className="min-w-[420px] sm:min-w-full h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e8ecf2', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ) : (
-            <div className="h-72 flex items-center justify-center text-[#5a6a82]">No data available</div>
-          )}
-        </div>
-
-        {/* Source Distribution (Bar) */}
-        <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#e8ecf2] shadow-sm">
-          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Leads by Source Page</h3>
-          {sourceData.length > 0 ? (
-            <div 
-              className="overflow-x-auto pb-2" 
-              style={{ scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 #f1f5f9' }}
-            >
-              <div className="min-w-[480px] sm:min-w-full h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sourceData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8ecf2" />
-                    <XAxis type="number" />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category" 
-                      width={130} 
-                      tickFormatter={(val) => val.length > 18 ? val.substring(0, 18) + '...' : val}
-                      tick={{ fill: '#5a6a82', fontSize: 11 }} 
-                    />
-                    <Tooltip 
-                      cursor={{ fill: '#f3f5f8' }}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e8ecf2', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Bar dataKey="value" fill="#c4a55a" radius={[0, 4, 4, 0]}>
-                      {sourceData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ) : (
-            <div className="h-72 flex items-center justify-center text-[#5a6a82]">No data available</div>
-          )}
-        </div>
-
-        {/* Project Interest (Bar) */}
-        <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#e8ecf2] shadow-sm">
-          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Project Interest</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Leads by Project</h3>
           {projectData.length > 0 ? (
             <div 
               className="overflow-x-auto pb-2" 
@@ -279,9 +168,41 @@ export default function ReportsClient({ initialLeads }: ReportsClientProps) {
           )}
         </div>
 
-        {/* Leads Over Time (Line or Bar) */}
+        {/* Leads by Status (Pie) */}
         <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#e8ecf2] shadow-sm">
-          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Leads Over Time (Months)</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Leads by Status</h3>
+          {statusData.length > 0 ? (
+            <div className="h-84">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e8ecf2', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-84 flex items-center justify-center text-[#5a6a82]">No data available</div>
+          )}
+        </div>
+
+        {/* Leads Over Time (Bar) */}
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#e8ecf2] shadow-sm lg:col-span-2">
+          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Leads Over Time</h3>
           {recentLeadsData.length > 0 ? (
             <div 
               className="overflow-x-auto pb-2" 
@@ -311,44 +232,6 @@ export default function ReportsClient({ initialLeads }: ReportsClientProps) {
             </div>
           ) : (
             <div className="h-84 flex items-center justify-center text-[#5a6a82]">No data available</div>
-          )}
-        </div>
-
-        {/* Downloaded Documents (Bar) */}
-        <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#e8ecf2] shadow-sm">
-          <h3 className="text-base sm:text-lg font-semibold text-[#0f1d33] mb-4 sm:mb-6">Downloaded Documents</h3>
-          {downloadData.length > 0 ? (
-            <div 
-              className="overflow-x-auto pb-2" 
-              style={{ scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 #f1f5f9' }}
-            >
-              <div className="min-w-[480px] sm:min-w-full h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={downloadData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8ecf2" />
-                    <XAxis type="number" />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category" 
-                      width={130} 
-                      tickFormatter={(val) => val.length > 18 ? val.substring(0, 18) + '...' : val}
-                      tick={{ fill: '#5a6a82', fontSize: 11 }} 
-                    />
-                    <Tooltip 
-                      cursor={{ fill: '#f3f5f8' }}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e8ecf2', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
-                      {downloadData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ) : (
-            <div className="h-72 flex items-center justify-center text-[#5a6a82]">No data available</div>
           )}
         </div>
 

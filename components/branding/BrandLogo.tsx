@@ -2,16 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Building2,
-  Crown,
-  Shield,
-  Diamond,
-  Zap,
-  Sparkles,
-  Layers,
-  Rocket,
-} from 'lucide-react';
-import {
   getStoredBrandSettings,
   BrandSettings,
   DEFAULT_BRAND_SETTINGS,
@@ -52,44 +42,14 @@ export function BrandLogo({
   const accentColor = branding.customAccent || palette.accent;
 
   const sizeClasses = {
-    sm: 'w-7 h-7 text-xs',
-    md: 'w-10 h-10 text-sm',
-    lg: 'w-14 h-14 text-base',
-    xl: 'w-20 h-20 text-xl',
-  };
-
-  const iconSizes = {
-    sm: 14,
-    md: 20,
-    lg: 28,
-    xl: 40,
-  };
-
-  const renderIcon = () => {
-    const s = iconSizes[size];
-    switch (branding.selectedIcon) {
-      case 'Crown':
-        return <Crown size={s} style={{ color: accentColor }} />;
-      case 'Shield':
-        return <Shield size={s} style={{ color: accentColor }} />;
-      case 'Diamond':
-        return <Diamond size={s} style={{ color: accentColor }} />;
-      case 'Zap':
-        return <Zap size={s} style={{ color: accentColor }} />;
-      case 'Sparkles':
-        return <Sparkles size={s} style={{ color: accentColor }} />;
-      case 'Layers':
-        return <Layers size={s} style={{ color: accentColor }} />;
-      case 'Rocket':
-        return <Rocket size={s} style={{ color: accentColor }} />;
-      case 'Building2':
-      default:
-        return <Building2 size={s} style={{ color: accentColor }} />;
-    }
+    sm: 'w-7 h-7 text-[10px]',
+    md: 'w-10 h-10 text-xs',
+    lg: 'w-14 h-14 text-sm',
+    xl: 'w-20 h-20 text-lg',
   };
 
   // If user uploaded a custom logo image
-  if (branding.logoType === 'image' && branding.customLogoUrl) {
+  if (branding.customLogoUrl) {
     if (!showContainer) {
       return (
         <img
@@ -101,7 +61,7 @@ export function BrandLogo({
     }
     return (
       <div
-        className={`flex items-center justify-center rounded-2xl bg-white border border-[#e8ecf2] shadow-sm overflow-hidden p-1 ${sizeClasses[size]} ${className}`}
+        className={`flex items-center justify-center rounded-2xl bg-white border border-[#e8ecf2] shadow-sm overflow-hidden p-1 shrink-0 ${sizeClasses[size]} ${className}`}
       >
         <img
           src={branding.customLogoUrl}
@@ -112,16 +72,22 @@ export function BrandLogo({
     );
   }
 
-  // Otherwise render icon with dynamic styling
+  // Clean, professional default CRM brand monogram
+  const defaultMark = (
+    <div className="flex items-center justify-center font-extrabold tracking-wider font-mono select-none" style={{ color: accentColor }}>
+      CRM
+    </div>
+  );
+
   if (!showContainer) {
-    return renderIcon();
+    return defaultMark;
   }
 
   return (
     <div
-      className={`flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#0f1d33] to-[#1e3a5f] shadow-md shadow-[#0f1d33]/10 shrink-0 transition-transform ${sizeClasses[size]} ${className}`}
+      className={`flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#0f1d33] to-[#1e3a5f] border border-white/10 shadow-md shadow-[#0f1d33]/15 shrink-0 transition-transform ${sizeClasses[size]} ${className}`}
     >
-      {renderIcon()}
+      {defaultMark}
     </div>
   );
 }

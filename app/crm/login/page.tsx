@@ -82,7 +82,7 @@ export default function LoginPage() {
             <BrandLogo size="lg" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f1d33] tracking-tight">
-            C<span className="text-[#c4a55a]">RM</span>
+            C<span style={{ color: 'var(--crm-accent, #c4a55a)' }}>RM</span>
           </h1>
           <p className="text-sm text-[#5a6a82]">
             Enter your credentials to access the internal dashboard.
@@ -105,7 +105,8 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleFillDemo}
-              className="shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-[#c4a55a] text-[#0f1d33] hover:bg-[#b59549] transition-colors shadow-2xs"
+              className="shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg text-[#0f1d33] transition-colors shadow-2xs hover:opacity-90"
+              style={{ backgroundColor: 'var(--crm-accent, #c4a55a)' }}
             >
               Fill Demo
             </button>

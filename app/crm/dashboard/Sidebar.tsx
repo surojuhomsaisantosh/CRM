@@ -110,8 +110,11 @@ export function Sidebar({
     >
       {/* Brand Header */}
       <div
-        className="relative flex items-center justify-center h-16 border-b border-[#e8ecf2] px-4"
+        className={`flex flex-col items-center justify-center border-b border-[#e8ecf2] transition-all ${
+          isCollapsed ? 'py-3 px-2 gap-1.5' : 'py-3.5 px-4 gap-2'
+        }`}
       >
+        {/* Line 1: Brand Title */}
         <Link
           href="/crm"
           onClick={onNavigate}
@@ -119,21 +122,30 @@ export function Sidebar({
         >
           <span
             className={`${
-              isCollapsed ? 'text-sm' : 'text-xl'
+              isCollapsed ? 'text-base' : 'text-xl'
             } font-black tracking-tight text-black whitespace-nowrap text-center`}
           >
             CRM
           </span>
         </Link>
 
-        {/* Collapse toggle button for desktop */}
-        <button
-          onClick={toggleCollapse}
-          className="absolute right-3 hidden md:flex items-center justify-center w-6 h-6 rounded-lg text-[#5a6a82] hover:text-[#0f1d33] hover:bg-[#f3f5f8] transition-colors shrink-0"
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
+        {/* Line 2: Collapse toggle button in a separate line below */}
+        <div className="w-full flex items-center justify-center">
+          <button
+            onClick={toggleCollapse}
+            className={`hidden md:flex items-center justify-center h-6 rounded-lg text-[#5a6a82] hover:text-[#0f1d33] hover:bg-[#f3f5f8] border border-transparent hover:border-[#e8ecf2] transition-all shrink-0 cursor-pointer ${
+              isCollapsed ? 'w-8' : 'w-10'
+            }`}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Navigation Links */}

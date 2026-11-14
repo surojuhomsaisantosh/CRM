@@ -1,6 +1,6 @@
 'use server'
 
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendUserCredentials, sendPasswordResetLink } from '@/lib/resend'
 import { validatePasswordPolicy } from '@/lib/auth/password-policy'
 
@@ -8,7 +8,35 @@ function getAdminClient() {
   return createServiceClient()
 }
 
+/**
+ * Strict authorization check: verifies caller's authenticated session and role
+ */
+async function requireAdminSession() {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    return { authorized: false, error: 'Unauthorized: Valid session required. Please log in.', user: null }
+  }
+
+  const supabaseAdmin = getAdminClient()
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('role, email')
+    .eq('id', user.id)
+    .single()
+
+  const role = profile?.role || user.user_metadata?.role
+  if (role !== 'Super Admin' && role !== 'Admin') {
+    return { authorized: false, error: 'Forbidden: Insufficient privileges to perform user management actions.', user: null }
+  }
+
+  return { authorized: true, user, role, email: profile?.email || user.email, error: null }
+}
+
 export async function addAdminUser(formData: FormData) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
   const email = formData.get('email') as string
   const role = formData.get('role') as string || 'Admin'
   const name = formData.get('name') as string || ''
@@ -68,6 +96,12 @@ export async function addAdminUser(formData: FormData) {
 }
 
 export async function listAdminUsers() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, error: 'Unauthorized: Session required.', users: [] }
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!supabaseUrl) {
     return {
@@ -117,13 +151,35 @@ export async function listAdminUsers() {
 }
 
 export async function deleteAdminUser(id: string) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
+  if (auth.user?.id === id) {
+    return { error: 'Action denied: You cannot delete your own account.' }
+  }
+
   const supabaseAdmin = getAdminClient()
+
+  // Protect root super admin
+  const { data: targetProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('email, role')
+    .eq('id', id)
+    .single()
+
+  if (targetProfile?.email === 'surojusantosh125@gmail.com') {
+    return { error: 'Action denied: The primary root Super Admin account cannot be deleted.' }
+  }
+
   const { error } = await supabaseAdmin.auth.admin.deleteUser(id)
   if (error) return { error: error.message }
   return { success: true }
 }
 
 export async function changeAdminPassword(formData: FormData) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
   const id = formData.get('id') as string
   const password = formData.get('password') as string
   if (!id || !password) return { error: 'ID and new password are required' }
@@ -140,7 +196,26 @@ export async function changeAdminPassword(formData: FormData) {
 }
 
 export async function toggleAdminStatus(id: string, disable: boolean) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
+  if (auth.user?.id === id) {
+    return { error: 'Action denied: You cannot disable your own account.' }
+  }
+
   const supabaseAdmin = getAdminClient()
+
+  // Protect root super admin from being disabled
+  const { data: targetProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('email')
+    .eq('id', id)
+    .single()
+
+  if (targetProfile?.email === 'surojusantosh125@gmail.com' && disable) {
+    return { error: 'Action denied: The primary root Super Admin account cannot be disabled.' }
+  }
+
   const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
     user_metadata: { is_disabled: disable }
   })
@@ -149,6 +224,9 @@ export async function toggleAdminStatus(id: string, disable: boolean) {
 }
 
 export async function sendPasswordResetEmail(email: string) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
   if (!email) return { error: 'Email is required' }
 
   const supabaseAdmin = getAdminClient()
@@ -170,6 +248,9 @@ export async function sendPasswordResetEmail(email: string) {
 }
 
 export async function editAdminUser(formData: FormData) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
   const id = formData.get('id') as string
   const role = formData.get('role') as string
   const name = formData.get('name') as string
@@ -229,6 +310,9 @@ export async function getRoles() {
 }
 
 export async function addRole(name: string) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
   const supabaseAdmin = getAdminClient()
   const { data, error } = await supabaseAdmin
     .from('roles')
@@ -241,6 +325,9 @@ export async function addRole(name: string) {
 }
 
 export async function deleteRole(id: string) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
   const supabaseAdmin = getAdminClient()
   const { error } = await supabaseAdmin
     .from('roles')
@@ -252,6 +339,9 @@ export async function deleteRole(id: string) {
 }
 
 export async function deleteAndReassignRole(roleId: string, oldRoleName: string, fallbackRoleName: string | null) {
+  const auth = await requireAdminSession()
+  if (!auth.authorized) return { error: auth.error }
+
   const supabaseAdmin = getAdminClient()
 
   if (fallbackRoleName) {

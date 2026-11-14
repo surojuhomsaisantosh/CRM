@@ -5,7 +5,10 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/crm';
+  const rawNext = searchParams.get('next') ?? '/crm';
+  
+  // Prevent Open Redirect (CWE-601): Ensure 'next' is a valid relative path and not protocol-relative (//)
+  const next = (rawNext.startsWith('/') && !rawNext.startsWith('//')) ? rawNext : '/crm';
 
   if (code) {
     const cookieStore = await cookies();

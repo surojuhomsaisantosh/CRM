@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState(false);
 
@@ -42,10 +43,12 @@ export default function LoginPage() {
       if (error) {
         setErrorMessage(error.message);
         toast.error(error.message);
+        setIsLoading(false);
         return;
       }
 
       if (data?.user) {
+        setIsLoggingIn(true);
         toast.success('Login successful!');
         router.push('/crm');
         router.refresh();
@@ -53,7 +56,6 @@ export default function LoginPage() {
     } catch (err: any) {
       setErrorMessage(err.message || 'An unexpected error occurred.');
       toast.error('Login failed. Please check your credentials.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -185,10 +187,15 @@ export default function LoginPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isLoggingIn}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#0f1d33] py-2.5 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#1a2b47] focus:outline-none focus:ring-2 focus:ring-[#0f1d33] focus:ring-offset-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isLoading ? (
+                {isLoggingIn ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Logging in...</span>
+                  </>
+                ) : isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Signing in...</span>

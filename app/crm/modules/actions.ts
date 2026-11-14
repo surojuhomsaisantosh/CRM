@@ -18,6 +18,31 @@ export interface ReportRecipient {
   report_times?: string[] | null
 }
 
+/**
+ * Strict authorization check: verifies caller's authenticated session and admin role
+ */
+async function requireAuthenticatedAdmin() {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    throw new Error('Unauthorized: Valid session required. Please log in.')
+  }
+
+  const supabaseAdmin = createServiceClient()
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const role = profile?.role || user.user_metadata?.role
+  if (role !== 'Super Admin' && role !== 'Admin') {
+    throw new Error('Forbidden: Insufficient privileges to modify system configuration.')
+  }
+
+  return { user, role }
+}
+
 export async function getReportRecipients(): Promise<{ data: ReportRecipient[], error: string | null }> {
   try {
     const supabase = createServiceClient()
@@ -51,6 +76,7 @@ export async function getReportRecipients(): Promise<{ data: ReportRecipient[], 
 
 export async function addReportRecipient(email: string, name?: string | null): Promise<{ success: boolean, data?: ReportRecipient, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const supabase = createServiceClient()
     const { data, error } = await supabase
       .from('report_recipients')
@@ -75,6 +101,7 @@ export async function updateReportRecipient(
   updates: { name?: string | null; email?: string; report_times?: string[] | null }
 ): Promise<{ success: boolean, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const supabase = createServiceClient()
     const payload: Record<string, any> = {}
 
@@ -140,6 +167,7 @@ export async function updateReportRecipient(
 
 export async function removeReportRecipient(id: string): Promise<{ success: boolean, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     if (!isUuid) {
       return { success: false, error: 'Invalid recipient ID format.' }
@@ -320,6 +348,7 @@ export async function addWaRecipient(
   report_times?: string[] | null
 ): Promise<{ success: boolean, data?: WaRecipient, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const supabase = createServiceClient()
     
     // 1. Normalize and validate phone
@@ -375,6 +404,7 @@ export async function updateWaRecipient(
   updates: { name?: string | null; phone_number?: string; report_times?: string[] | null }
 ): Promise<{ success: boolean, data?: WaRecipient, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const supabase = createServiceClient()
 
     // 1. Verify recipient exists
@@ -471,6 +501,7 @@ export async function updateWaRecipientName(id: string, name: string): Promise<{
 
 export async function removeWaRecipient(id: string): Promise<{ success: boolean, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     if (!isUuid) {
       return { success: false, error: 'Invalid recipient ID format.' }
@@ -637,6 +668,7 @@ export async function getRolePermissions(roleId: string): Promise<{ data: RolePe
 
 export async function updateRolePermissions(roleId: string, permissions: { module_name: string, access_level: AccessLevel }[]): Promise<{ success: boolean, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const supabase = createServiceClient()
     // Upsert permissions
     if (permissions.length === 0) {
@@ -685,6 +717,7 @@ export async function getUserPermissions(userId: string): Promise<{ data: UserPe
 
 export async function updateUserPermissions(userId: string, permissions: { module_name: string, access_level: AccessLevel }[]): Promise<{ success: boolean, error?: string }> {
   try {
+    await requireAuthenticatedAdmin()
     const supabase = createServiceClient()
     
     // Clear all existing overrides first

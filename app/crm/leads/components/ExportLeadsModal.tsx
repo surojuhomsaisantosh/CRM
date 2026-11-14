@@ -21,7 +21,7 @@ import {
   exportLeadsToPDF, 
   exportLeadsToExcel, 
   exportLeadsToCSV 
-} from '@/lib/reports/leads-export'
+} from '@/app/crm/reports/leads-export'
 
 interface ExportLeadsModalProps {
   isOpen: boolean

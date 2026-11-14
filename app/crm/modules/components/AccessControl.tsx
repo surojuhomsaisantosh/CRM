@@ -7,7 +7,7 @@ import { getRolePermissions, updateRolePermissions, getUserPermissions, updateUs
 const CRM_MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'leads', label: 'Leads' },
-  { id: 'whatsapp', label: 'Inbox' },
+  { id: 'inbox', label: 'Inbox' },
   { id: 'reports', label: 'Reports' },
   { id: 'modules', label: 'Modules' },
   { id: 'users', label: 'Users' },
@@ -60,6 +60,9 @@ export default function AccessControl({ roles, users }: { roles: any[], users: a
           if (res.error) throw new Error(res.error)
           const permMap: Record<string, AccessLevel> = {}
           res.data.forEach(p => { permMap[p.module_name] = p.access_level })
+          if (permMap['whatsapp'] && !permMap['inbox']) {
+            permMap['inbox'] = permMap['whatsapp']
+          }
           setPermissions(permMap)
           setInitialPermissions(permMap)
         } else if (activeTab === 'users' && selectedUserId) {
@@ -67,6 +70,9 @@ export default function AccessControl({ roles, users }: { roles: any[], users: a
           if (res.error) throw new Error(res.error)
           const permMap: Record<string, AccessLevel> = {}
           res.data.forEach(p => { permMap[p.module_name] = p.access_level })
+          if (permMap['whatsapp'] && !permMap['inbox']) {
+            permMap['inbox'] = permMap['whatsapp']
+          }
           setPermissions(permMap)
           setInitialPermissions(permMap)
 
@@ -115,6 +121,9 @@ export default function AccessControl({ roles, users }: { roles: any[], users: a
         module_name,
         access_level
       }))
+      if (permissions['inbox'] && !payload.some(p => p.module_name === 'whatsapp')) {
+        payload.push({ module_name: 'whatsapp', access_level: permissions['inbox'] })
+      }
 
       let res;
       if (activeTab === 'roles') {

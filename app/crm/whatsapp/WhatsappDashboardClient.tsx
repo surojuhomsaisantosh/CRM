@@ -471,7 +471,7 @@ export default function WhatsappDashboardClient({
             <table className="w-full text-left text-xs text-[#5a6a82] relative">
               <thead className="bg-[#f3f5f8] text-xs uppercase font-semibold text-[#1e3a5f] sticky top-0 z-10 border-b border-[#e8ecf2]">
                 <tr>
-                  <th className="px-4 py-3 w-16 text-[#1e3a5f]">Sr. No</th>
+                  <th className="px-4 py-3 w-20 whitespace-nowrap text-[#1e3a5f]">Sr. No</th>
                   <th className="px-4 py-3 w-72">Lead Info</th>
                   <th className="px-4 py-3 w-52">Project</th>
                   <th className="px-4 py-3 w-64">Form ID & Form Name</th>
@@ -484,7 +484,7 @@ export default function WhatsappDashboardClient({
                   processedLeads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-[#f8fafc] transition-colors">
                       {/* Sr. No */}
-                      <td className="px-4 py-3 text-[#5a6a82] font-semibold">
+                      <td className="px-4 py-3 text-[#5a6a82] font-semibold whitespace-nowrap">
                         {(currentPage - 1) * pageSize + processedLeads.indexOf(lead) + 1}
                       </td>
 

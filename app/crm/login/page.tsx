@@ -104,13 +104,13 @@ export default function LoginPage() {
             <BrandLogo size="lg" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f1d33] tracking-tight">
-            C<span style={{ color: 'var(--crm-accent, #c4a55a)' }}>RM</span>
+            Login to C<span style={{ color: 'var(--crm-accent, #c4a55a)' }}>RM</span>
           </h1>
-          <p className="text-sm text-[#5a6a82]">
-            {mode === 'signin'
-              ? 'Enter your credentials to access the internal dashboard.'
-              : 'Recover your account access via your registered email.'}
-          </p>
+          {mode === 'forgot' && (
+            <p className="text-sm text-[#5a6a82]">
+              Recover your account access via your registered email.
+            </p>
+          )}
         </div>
 
         {/* Auth Card */}

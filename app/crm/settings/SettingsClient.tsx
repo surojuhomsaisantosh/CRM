@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Key, Eye, EyeOff } from 'lucide-react'
-import BrandingSettings from './components/BrandingSettings'
+import BrandingSettings from './BrandingSettings'
 
 export default function SettingsClient() {
   const [newPassword, setNewPassword] = useState('')

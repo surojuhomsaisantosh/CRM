@@ -1,8 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/server'
 import { canonicalPhoneNumber } from '@/lib/phone-input'
 import { revalidatePath } from 'next/cache'
+import { INITIAL_DEMO_LEADS } from '@/lib/demo-data'
 
 export async function getLeads(
   page: number = 1, 
@@ -18,9 +19,28 @@ export async function getLeads(
     sortOrder?: 'asc' | 'desc'
   }
 ) {
-  const supabase = await createClient()
   const from = (page - 1) * limit
   const to = from + limit - 1
+
+  // High performance demo fallback when live Supabase is unconfigured (0ms latency)
+  if (!isSupabaseConfigured()) {
+    let list = [...INITIAL_DEMO_LEADS];
+    if (filters?.searchQuery) {
+      const q = filters.searchQuery.toLowerCase().trim();
+      list = list.filter((l) =>
+        l.name.toLowerCase().includes(q) ||
+        l.email.toLowerCase().includes(q) ||
+        l.phone.includes(q) ||
+        l.project.toLowerCase().includes(q)
+      );
+    }
+    if (filters?.status && filters.status !== 'all') {
+      list = list.filter((l) => l.status === filters.status?.toLowerCase());
+    }
+    return { data: list.slice(from, to + 1), count: list.length };
+  }
+
+  const supabase = await createClient()
 
   let query = supabase
     .from('leads')

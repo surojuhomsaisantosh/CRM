@@ -17,7 +17,8 @@ import {
   Mail,
   X
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isBrowserSupabaseConfigured } from "@/lib/supabase/client";
+import { INITIAL_DEMO_LEADS } from "@/lib/demo-data";
 
 export default function DashboardPage() {
   const [totalLeads, setTotalLeads] = useState<number | null>(null)
@@ -38,6 +39,18 @@ export default function DashboardPage() {
   
   useEffect(() => {
     async function fetchLeads() {
+      if (!isBrowserSupabaseConfigured()) {
+        setTotalLeads(INITIAL_DEMO_LEADS.length);
+        setTodaysLeads(2);
+        setNewLeads(INITIAL_DEMO_LEADS.filter(l => l.status === 'new').length);
+        setUncontacted(0);
+        setContacted(INITIAL_DEMO_LEADS.filter(l => l.status === 'contacted').length);
+        setQualified(INITIAL_DEMO_LEADS.filter(l => l.status === 'qualified').length);
+        setRejected(0);
+        setClosed(INITIAL_DEMO_LEADS.filter(l => l.status === 'won').length);
+        return;
+      }
+
       const supabase = createClient();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -80,6 +93,18 @@ export default function DashboardPage() {
 
     async function fetchFilteredLeads() {
       setIsTableLoading(true);
+
+      if (!isBrowserSupabaseConfigured()) {
+        let list = [...INITIAL_DEMO_LEADS];
+        if (filterId !== 'total' && filterId !== 'todays') {
+          list = list.filter((l) => l.status === filterId);
+        }
+        setTableLeads(list);
+        setTableCount(list.length);
+        setIsTableLoading(false);
+        return;
+      }
+
       const supabase = createClient();
       let query = supabase.from('leads').select('*', { count: 'exact' });
       

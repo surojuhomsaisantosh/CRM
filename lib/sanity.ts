@@ -1,11 +1,30 @@
-import { createServiceClient } from '@/lib/supabase/server';
+import { createServiceClient, isSupabaseConfigured } from '@/lib/supabase/server';
+import { INITIAL_DEMO_PROJECTS } from '@/lib/demo-data';
 
 /**
  * Adapter for project inventory:
  * Falls back to Supabase 'projects' table if Sanity is not configured.
+ * In demo mode, returns instant mock project entries with 0ms latency.
  */
 export const client = {
   async fetch(query: string) {
+    if (!isSupabaseConfigured()) {
+      return {
+        projectEntries: INITIAL_DEMO_PROJECTS.map((p) => ({
+          name: p.name,
+          categoryName: p.category_name,
+          location: p.location,
+          description: p.description,
+          googleMapsUrl: p.google_maps_url,
+          brochureUrl: '',
+          layoutPdfUrl: '',
+          reraCertificateUrl: '',
+          hmdaDtcpCertificateUrl: '',
+          approvalCertificateLabel: p.approval_certificate_label,
+        })),
+      };
+    }
+
     try {
       const supabase = createServiceClient();
       const { data: dbProjects } = await supabase

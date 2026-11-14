@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, isSupabaseConfigured } from '@/lib/supabase/server'
+import { INITIAL_DEMO_STATUSES } from '@/lib/demo-data'
 import { getOtpDownloadEnabled, setOtpDownloadEnabled } from '@/lib/otp-config'
 import { redis } from '@/lib/redis'
 import { Resend } from 'resend'
@@ -847,6 +848,10 @@ export interface LeadStatus {
 
 export async function getLeadStatuses(): Promise<{ success: boolean; data: LeadStatus[]; error?: string }> {
   try {
+    if (!isSupabaseConfigured()) {
+      return { success: true, data: INITIAL_DEMO_STATUSES as any };
+    }
+
     const supabase = createServiceClient()
     
     // Fetch all statuses

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { Sidebar } from "@/components/dashboard/Sidebar"
+import { Sidebar } from "./dashboard/Sidebar"
 import { createClient } from "@/lib/supabase/client"
 import { Building2, Menu, X } from "lucide-react"
 import Link from "next/link"

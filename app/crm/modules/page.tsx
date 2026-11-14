@@ -13,19 +13,29 @@ export const metadata = {
 
 export default async function ModulesPage() {
   await requireAccess('modules')
-  const { data: initialRecipients } = await getReportRecipients()
-  const { data: initialWaRecipients } = await getWaRecipients()
-  const { data: initialLeadStatuses } = await getLeadStatuses()
-  const roles = await getRoles()
-  const users = await listAdminUsers()
+
+  // Run all 5 database queries in parallel with Promise.all to cut roundtrip latency
+  const [
+    recipientsRes,
+    waRecipientsRes,
+    leadStatusesRes,
+    rolesRes,
+    usersRes
+  ] = await Promise.all([
+    getReportRecipients(),
+    getWaRecipients(),
+    getLeadStatuses(),
+    getRoles(),
+    listAdminUsers()
+  ])
 
   return (
     <ModulesClient 
-      initialRecipients={initialRecipients || []} 
-      initialWaRecipients={initialWaRecipients || []}
-      roles={roles.data || []}
-      users={users.users || []}
-      initialLeadStatuses={initialLeadStatuses || []}
+      initialRecipients={recipientsRes.data || []} 
+      initialWaRecipients={waRecipientsRes.data || []}
+      roles={rolesRes.data || []}
+      users={usersRes.users || []}
+      initialLeadStatuses={leadStatusesRes.data || []}
     />
   )
 }

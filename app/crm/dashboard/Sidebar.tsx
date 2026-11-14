@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
-  UserCheck
+  UserCheck,
+  Loader2
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -28,6 +29,7 @@ interface SidebarProps {
   userRole?: string;
   userName?: string;
   userEmail?: string;
+  onNavigationStart?: (href: string) => void;
 }
 
 export function Sidebar({
@@ -37,10 +39,16 @@ export function Sidebar({
   userRole = 'Admin',
   userName = '',
   userEmail = '',
+  onNavigationStart,
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [pendingHref, setPendingHref] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   const navItems = [
     {
@@ -141,26 +149,49 @@ export function Sidebar({
           const isActive = item.exact
             ? pathname === item.href
             : pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          const isPending = pendingHref === item.href && !isActive;
           const Icon = item.icon;
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              onClick={onNavigate}
+              prefetch={true}
+              onClick={() => {
+                if (pathname !== item.href) {
+                  setPendingHref(item.href);
+                  if (onNavigationStart) onNavigationStart(item.href);
+                }
+                if (onNavigate) onNavigate();
+              }}
               title={isCollapsed ? item.title : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                 isActive
                   ? 'bg-[#0f1d33] text-white shadow-sm'
+                  : isPending
+                  ? 'bg-[#0f1d33]/85 text-white shadow-xs ring-1 ring-[#c4a55a]/40'
                   : 'text-[#5a6a82] hover:bg-[#f3f5f8] hover:text-[#0f1d33]'
               }`}
             >
-              <Icon
-                className={`w-5 h-5 shrink-0 ${
-                  isActive ? 'text-[#c4a55a]' : 'text-[#7a8b9e]'
-                }`}
-              />
-              {!isCollapsed && <span className="truncate">{item.title}</span>}
+              {isPending ? (
+                <Loader2 className="w-5 h-5 shrink-0 animate-spin text-[#c4a55a]" />
+              ) : (
+                <Icon
+                  className={`w-5 h-5 shrink-0 ${
+                    isActive ? 'text-[#c4a55a]' : 'text-[#7a8b9e]'
+                  }`}
+                />
+              )}
+              {!isCollapsed && (
+                <div className="flex items-center justify-between flex-1 min-w-0">
+                  <span className="truncate">{item.title}</span>
+                  {isPending && (
+                    <span className="text-[10px] font-bold tracking-wider text-[#c4a55a] animate-pulse">
+                      LOADING...
+                    </span>
+                  )}
+                </div>
+              )}
             </Link>
           );
         })}

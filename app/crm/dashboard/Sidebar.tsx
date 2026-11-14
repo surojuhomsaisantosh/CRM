@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users2,
+  FolderKanban,
   Inbox,
   BarChart3,
   Sliders,
@@ -53,6 +54,11 @@ export function Sidebar({
       title: 'Leads Pipeline',
       href: '/crm/leads',
       icon: Users2,
+    },
+    {
+      title: 'Projects',
+      href: '/crm/projects',
+      icon: FolderKanban,
     },
     {
       title: 'Inbox',

@@ -9,6 +9,7 @@ export async function getLeads(
   limit: number = 50,
   filters?: {
     searchQuery?: string,
+    project?: string,
     sources?: string[],
     status?: string,
     statuses?: string[],
@@ -38,6 +39,11 @@ export async function getLeads(
       const q = `%${cleanSearch}%`;
       query = query.or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q},project.ilike.${q}`);
     }
+  }
+
+  // Apply Project
+  if (filters?.project && filters.project !== 'all') {
+    query = query.eq('project', filters.project);
   }
 
   // Apply Status
@@ -112,6 +118,20 @@ export async function createLead(formData: FormData) {
   const project = formData.get('project') as string
   const enquiry_type = formData.get('enquiry_type') as string
   const downloaded_item = formData.get('downloaded_item') as string
+  const form_id = formData.get('form_id') as string
+
+  // If lead originates from a registered Meta form, verify the form is active
+  if (form_id) {
+    const { data: formCheck } = await supabase
+      .from('meta_forms')
+      .select('is_active, project_name')
+      .eq('form_id', form_id)
+      .maybeSingle()
+
+    if (formCheck && formCheck.is_active === false) {
+      return { error: 'Incoming leads for this form are currently paused and inactive.' }
+    }
+  }
 
   if (!name || !email) {
     return { error: 'Name and Email are required' }
@@ -156,6 +176,20 @@ export async function updateLead(id: string, formData: FormData) {
   const project = formData.get('project') as string
   const enquiry_type = formData.get('enquiry_type') as string
   const downloaded_item = formData.get('downloaded_item') as string
+  const form_id = formData.get('form_id') as string
+
+  // If lead originates from a registered Meta form, verify the form is active
+  if (form_id) {
+    const { data: formCheck } = await supabase
+      .from('meta_forms')
+      .select('is_active, project_name')
+      .eq('form_id', form_id)
+      .maybeSingle()
+
+    if (formCheck && formCheck.is_active === false) {
+      return { error: 'Incoming leads for this form are currently paused and inactive.' }
+    }
+  }
 
   if (!name || !email) {
     return { error: 'Name and Email are required' }
@@ -330,6 +364,19 @@ export async function getLeadActivities(leadId: string) {
 }
 
 // Meta Forms Server Actions
+export async function getProjectsList() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, name, client_name')
+    .order('name', { ascending: true })
+
+  if (error) {
+    return { data: [], error: error.message }
+  }
+  return { data: data || [], error: null }
+}
+
 export async function getMetaForms() {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -345,17 +392,41 @@ export async function getMetaForms() {
   return { data, error: null }
 }
 
-export async function addMetaForm(form_id: string, name: string = '') {
+export async function addMetaForm(
+  form_id: string,
+  name: string = '',
+  project_id: string = '',
+  project_name: string = ''
+) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('meta_forms')
-    .insert([{ form_id, name }])
+    .insert([{
+      form_id,
+      name,
+      project_id: project_id || null,
+      project_name: project_name || '',
+      is_active: true
+    }])
     .select()
 
   if (error) {
     return { error: error.message }
   }
   return { success: true, data }
+}
+
+export async function toggleMetaFormStatus(id: string, is_active: boolean) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('meta_forms')
+    .update({ is_active })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+  return { success: true }
 }
 
 export async function deleteMetaForm(id: string) {

@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Edit2, Trash2, X, Search, Globe, FilterX, Download, MessageCircle, Megaphone, Settings, ArrowUp, ArrowDown, ArrowUpDown, Check, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Search, Globe, FilterX, Download, MessageCircle, Megaphone, Settings, ArrowUp, ArrowDown, ArrowUpDown, Check, RefreshCw, AlertTriangle, Loader2, FolderKanban, FileCheck2, FileX2 } from 'lucide-react'
 
 
 import { createClient } from '@/lib/supabase/client'
 import { canonicalPhoneNumber } from '@/lib/phone-input'
-import { createLead, updateLead, deleteLead, deleteMultipleLeads, updateLeadStatus, getLeadActivities, getMetaForms, addMetaForm, deleteMetaForm, updateMetaFormName, getLeads } from './actions'
+import { createLead, updateLead, deleteLead, deleteMultipleLeads, updateLeadStatus, getLeadActivities, getMetaForms, addMetaForm, deleteMetaForm, updateMetaFormName, getLeads, getProjectsList, toggleMetaFormStatus } from './actions'
 import { useRouter } from 'next/navigation'
 import { useRef } from 'react'
 import { toast } from 'sonner'
@@ -234,11 +234,16 @@ export default function LeadsClient({
   // Bulk Selection State
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([])
   
+  // Projects & Filter State
+  const [availableProjects, setAvailableProjects] = useState<{ id: string, name: string, client_name: string }[]>([])
+  const [selectedProject, setSelectedProject] = useState<string>('all')
+
   // Meta Settings State
   const [isMetaSettingsOpen, setIsMetaSettingsOpen] = useState(false)
   const [metaForms, setMetaForms] = useState<any[]>([])
   const [newFormId, setNewFormId] = useState('')
   const [newFormName, setNewFormName] = useState('')
+  const [newFormProjectId, setNewFormProjectId] = useState('')
   const [editingMetaFormId, setEditingMetaFormId] = useState<string | null>(null)
   const [editingMetaFormName, setEditingMetaFormName] = useState('')
   const [isMetaLoading, setIsMetaLoading] = useState(false)
@@ -351,11 +356,24 @@ export default function LeadsClient({
     setIsLoadingActivities(false)
   }
 
+  // Load projects list on mount
+  useEffect(() => {
+    async function loadProjects() {
+      const { data } = await getProjectsList()
+      if (data) setAvailableProjects(data)
+    }
+    loadProjects()
+  }, [])
+
   const openMetaSettings = async () => {
     setIsMetaSettingsOpen(true)
     setIsMetaLoading(true)
-    const { data } = await getMetaForms()
-    setMetaForms(data || [])
+    const [{ data: formsData }, { data: projectsData }] = await Promise.all([
+      getMetaForms(),
+      getProjectsList()
+    ])
+    setMetaForms(formsData || [])
+    if (projectsData) setAvailableProjects(projectsData)
     setIsMetaLoading(false)
   }
 
@@ -366,18 +384,41 @@ export default function LeadsClient({
     isMetaLoadingRef.current = true
     setIsMetaLoading(true)
     try {
-      const res = await addMetaForm(newFormId, newFormName)
+      const selectedProj = availableProjects.find(p => p.id === newFormProjectId)
+      const res = await addMetaForm(
+        newFormId,
+        newFormName,
+        newFormProjectId,
+        selectedProj?.name || ''
+      )
       if (res.error) {
-        alert(res.error)
+        toast.error(res.error)
       } else {
+        toast.success('Form ID added successfully.')
         setNewFormId('')
         setNewFormName('')
+        setNewFormProjectId('')
         const { data } = await getMetaForms()
         setMetaForms(data || [])
       }
     } finally {
       isMetaLoadingRef.current = false
       setIsMetaLoading(false)
+    }
+  }
+
+  const handleToggleMetaFormStatus = async (form: any) => {
+    const newStatus = !(form.is_active !== false)
+    try {
+      const res = await toggleMetaFormStatus(form.id, newStatus)
+      if (res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success(`Form marked as ${newStatus ? 'Active' : 'Inactive'}.`)
+        setMetaForms(metaForms.map(f => f.id === form.id ? { ...f, is_active: newStatus } : f))
+      }
+    } catch (err: any) {
+      toast.error('Failed to update form status')
     }
   }
 
@@ -693,6 +734,7 @@ export default function LeadsClient({
         
         const filters = {
           searchQuery: debouncedSearchQuery,
+          project: selectedProject !== 'all' ? selectedProject : undefined,
           sources: selectedSources,
           status: selectedStatus,
           startDate: sd,
@@ -712,12 +754,12 @@ export default function LeadsClient({
     };
 
     fetchFilteredLeads();
-  }, [currentPage, debouncedSearchQuery, selectedSources, selectedStatus, startDate, endDate, dateFilterType, sortField, sortOrder]);
+  }, [currentPage, debouncedSearchQuery, selectedProject, selectedSources, selectedStatus, startDate, endDate, dateFilterType, sortField, sortOrder]);
 
   // Reset to page 1 when filters change (but not when page changes)
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery, selectedSources, selectedStatus, startDate, endDate, dateFilterType, sortField, sortOrder]);
+  }, [debouncedSearchQuery, selectedProject, selectedSources, selectedStatus, startDate, endDate, dateFilterType, sortField, sortOrder]);
 
   const filteredLeads = leads; // We now use the server-filtered leads directly
 
@@ -769,9 +811,10 @@ export default function LeadsClient({
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto md:justify-end">
-            {(selectedStatus !== 'all' || selectedSources.length > 0 || startDate || endDate || searchQuery) && (
+            {(selectedProject !== 'all' || selectedStatus !== 'all' || selectedSources.length > 0 || startDate || endDate || searchQuery) && (
               <button
                 onClick={() => {
+                  setSelectedProject('all')
                   setSelectedStatus('all')
                   setSelectedSources([])
                   setStartDate('')
@@ -817,7 +860,63 @@ export default function LeadsClient({
           </div>
         </div>
 
-        {/* Row 2: Source & Date Filters */}
+        {/* Row 2: Filter by Project (First Filter) */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-2.5 border-t border-[#f0f3f7] min-w-0">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#5a6a82] shrink-0 whitespace-nowrap select-none flex items-center gap-1.5">
+            <FolderKanban className="w-3.5 h-3.5 text-[#c4a55a]" />
+            Filter by Project:
+          </span>
+
+          <div className="flex items-center gap-2 min-w-0 w-full flex-1">
+            <button
+              onClick={() => setSelectedProject('all')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border shrink-0 select-none ${
+                selectedProject === 'all'
+                  ? 'bg-[#0f1d33] text-white border-[#0f1d33] shadow-xs font-semibold'
+                  : 'bg-[#f3f5f8] text-[#5a6a82] border-transparent hover:bg-[#e8ecf2] hover:text-[#0f1d33]'
+              }`}
+            >
+              All Projects
+            </button>
+
+            <div className="w-px h-5 bg-[#e8ecf2] shrink-0" />
+
+            {/* Dynamic Projects Pills */}
+            <div 
+              className="overflow-x-auto pb-1.5 pt-0.5 flex-1 min-w-0"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#94a3b8 #f1f5f9'
+              }}
+            >
+              <div className="flex items-center gap-2 min-w-max py-0.5">
+                {availableProjects.length === 0 ? (
+                  <span className="text-xs text-[#94a3b8] italic">No projects created yet</span>
+                ) : (
+                  availableProjects.map((p) => {
+                    const isSelected = selectedProject.toLowerCase() === p.name.toLowerCase();
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setSelectedProject(isSelected ? 'all' : p.name)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border shrink-0 ${
+                          isSelected
+                            ? 'bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-300/30 font-semibold shadow-xs'
+                            : 'bg-[#f3f5f8] text-[#5a6a82] border-transparent hover:bg-[#e8ecf2] hover:text-[#0f1d33]'
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-600' : 'bg-gray-400'}`} />
+                        {p.name}
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Source & Date Filters */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2.5 border-t border-[#f0f3f7]">
           {/* Source Filter Group */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0 w-full lg:w-auto">
@@ -980,19 +1079,14 @@ export default function LeadsClient({
       </div>
 
       {/* Component Just Above the Table: Number of leads for active filter */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-white rounded-xl border border-[#e8ecf2] shadow-2xs text-xs">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[#5a6a82]">Showing</span>
-          <span className="inline-flex items-center justify-center font-bold text-[#0f1d33] bg-[#f0f4f9] px-2.5 py-0.5 rounded-md border border-[#d8e2ed] text-xs">
-            {isPageLoading ? (
-              <span className="inline-block w-4 h-3 bg-gray-200 animate-pulse rounded" />
-            ) : (
-              totalLeadsCount
-            )}
-          </span>
-          <span className="text-[#5a6a82]">
-            {totalLeadsCount === 1 ? 'lead' : 'leads'}
-          </span>
+      <div className="flex items-center justify-between px-4 py-2.5 bg-white rounded-xl border border-[#e8ecf2] shadow-2xs text-xs gap-3">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          {selectedProject !== 'all' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold border bg-amber-50 text-amber-900 border-amber-300">
+              <FolderKanban className="w-3.5 h-3.5 text-amber-600" />
+              Project: {selectedProject}
+            </span>
+          )}
 
           {selectedStatus !== 'all' && (() => {
             const currentStatusObj = statuses.find((s: any) => s.key.toLowerCase() === selectedStatus.toLowerCase())
@@ -1025,22 +1119,38 @@ export default function LeadsClient({
               Search: &quot;{debouncedSearchQuery}&quot;
             </span>
           )}
+
+          {(selectedProject !== 'all' || selectedStatus !== 'all' || selectedSources.length > 0 || startDate || endDate || debouncedSearchQuery) && (
+            <button
+              onClick={() => {
+                setSelectedProject('all')
+                setSelectedStatus('all')
+                setSelectedSources([])
+                setStartDate('')
+                setEndDate('')
+                setSearchQuery('')
+              }}
+              className="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline shrink-0 ml-1"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
 
-        {(selectedStatus !== 'all' || selectedSources.length > 0 || startDate || endDate || debouncedSearchQuery) && (
-          <button
-            onClick={() => {
-              setSelectedStatus('all')
-              setSelectedSources([])
-              setStartDate('')
-              setEndDate('')
-              setSearchQuery('')
-            }}
-            className="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline shrink-0 ml-2"
-          >
-            Clear Filters
-          </button>
-        )}
+        {/* Showing leads counter moved to Right Side! */}
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          <span className="text-[#5a6a82]">Showing</span>
+          <span className="inline-flex items-center justify-center font-bold text-[#0f1d33] bg-[#f0f4f9] px-2.5 py-0.5 rounded-md border border-[#d8e2ed] text-xs">
+            {isPageLoading ? (
+              <span className="inline-block w-4 h-3 bg-gray-200 animate-pulse rounded" />
+            ) : (
+              totalLeadsCount
+            )}
+          </span>
+          <span className="text-[#5a6a82]">
+            {totalLeadsCount === 1 ? 'lead' : 'leads'}
+          </span>
+        </div>
       </div>
 
       <div className="rounded-xl border border-[#e8ecf2] bg-white shadow-sm flex flex-col overflow-hidden h-[65vh] md:h-[75vh]">
@@ -1847,45 +1957,85 @@ export default function LeadsClient({
                 <h3 className="text-sm font-semibold text-[#0f1d33] mb-3">Add New Form ID</h3>
                 <div className="space-y-3">
                   <div>
+                    <label className="block text-xs font-semibold text-[#0f1d33] mb-1">
+                      Form ID <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      placeholder="Form ID (e.g. 10129381239)"
+                      placeholder="e.g. 10129381239"
                       value={newFormId}
                       onChange={(e) => setNewFormId(e.target.value)}
-                      className="w-full rounded-lg border border-[#e8ecf2] bg-white px-3 py-2 text-sm text-[#0f1d33] outline-none focus:border-[#1e3a5f]"
+                      className="w-full rounded-lg border border-[#e8ecf2] bg-white px-3 py-2 text-xs text-[#0f1d33] outline-none focus:border-[#0f1d33]"
                     />
                   </div>
-                  <div className="flex gap-2">
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#0f1d33] mb-1">
+                      Form Name (Optional)
+                    </label>
                     <input
                       type="text"
-                      placeholder="Form Name (Optional)"
+                      placeholder="e.g. Brochure Download Form"
                       value={newFormName}
                       onChange={(e) => setNewFormName(e.target.value)}
-                      className="flex-1 rounded-lg border border-[#e8ecf2] bg-white px-3 py-2 text-sm text-[#0f1d33] outline-none focus:border-[#1e3a5f]"
+                      className="w-full rounded-lg border border-[#e8ecf2] bg-white px-3 py-2 text-xs text-[#0f1d33] outline-none focus:border-[#0f1d33]"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#0f1d33] mb-1">
+                      Associated Project
+                    </label>
+                    <select
+                      value={newFormProjectId}
+                      onChange={(e) => setNewFormProjectId(e.target.value)}
+                      className="w-full rounded-lg border border-[#e8ecf2] bg-white px-3 py-2 text-xs text-[#0f1d33] outline-none focus:border-[#0f1d33]"
+                    >
+                      <option value="">Select Project (Optional)</option>
+                      {availableProjects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.client_name})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="pt-1">
                     <button
                       type="submit"
                       disabled={isMetaLoading}
-                      className="inline-flex items-center justify-center rounded-lg bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f1d33] disabled:opacity-50 disabled:pointer-events-none"
+                      className="w-full inline-flex items-center justify-center rounded-lg bg-[#0f1d33] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1a2d4c] disabled:opacity-50 disabled:pointer-events-none transition-colors"
                     >
-                      {isMetaLoading ? 'Adding...' : 'Add'}
+                      {isMetaLoading ? 'Adding Form...' : 'Add Form to Project'}
                     </button>
                   </div>
                 </div>
               </form>
 
               <div>
-                <h3 className="text-sm font-semibold text-[#0f1d33] mb-3">Active Form IDs</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-[#0f1d33]">Configured Form IDs</h3>
+                  <div className="flex items-center gap-2 text-[11px] text-[#5a6a82]">
+                    <span className="text-emerald-700 font-semibold">
+                      {metaForms.filter(f => f.is_active !== false).length} Active
+                    </span>
+                    <span>•</span>
+                    <span className="text-slate-500 font-semibold">
+                      {metaForms.filter(f => f.is_active === false).length} Inactive
+                    </span>
+                  </div>
+                </div>
+
                 {isMetaLoading && metaForms.length === 0 ? (
                   <div className="text-sm text-[#5a6a82]">Loading forms...</div>
                 ) : metaForms.length === 0 ? (
-                  <div className="text-sm text-[#5a6a82] bg-[#f3f5f8] p-3 rounded-lg text-center">No active forms added yet.</div>
+                  <div className="text-sm text-[#5a6a82] bg-[#f3f5f8] p-3 rounded-lg text-center">No forms added yet.</div>
                 ) : (
                   <div className="space-y-4">
-                    <ul className="space-y-2">
+                    <ul className="space-y-2.5">
                       {metaForms.map((form) => (
-                        <li key={form.id} className="flex items-center justify-between bg-white border border-[#e8ecf2] p-3 rounded-lg shadow-sm">
+                        <li key={form.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white border border-[#e8ecf2] p-3 rounded-lg shadow-2xs hover:border-[#cbd5e1] transition-all">
                           {editingMetaFormId === form.id ? (
                             <div className="flex-1 flex gap-2 mr-3">
                               <input
@@ -1897,17 +2047,43 @@ export default function LeadsClient({
                                   if (e.key === 'Enter') handleUpdateMetaFormName(form.id)
                                   if (e.key === 'Escape') setEditingMetaFormId(null)
                                 }}
-                                className="w-full rounded border border-[#e8ecf2] px-2 py-1 text-sm outline-none focus:border-[#1e3a5f]"
+                                className="w-full rounded border border-[#e8ecf2] px-2 py-1 text-xs outline-none focus:border-[#0f1d33]"
                               />
                               <button onClick={() => handleUpdateMetaFormName(form.id)} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Save"><Check className="w-4 h-4" /></button>
                               <button onClick={() => setEditingMetaFormId(null)} className="p-1.5 text-[#5a6a82] hover:bg-[#f3f5f8] rounded" title="Cancel"><X className="w-4 h-4" /></button>
                             </div>
                           ) : (
-                            <div className="flex-1 flex items-center justify-between mr-3">
-                              <div>
-                                <div className="text-sm font-medium text-[#0f1d33]">{form.form_id}</div>
-                                {form.name && <div className="text-xs text-[#5a6a82] mt-0.5">{form.name}</div>}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-[#0f1d33]">{form.form_id}</span>
+                                {form.project_name && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-200">
+                                    <FolderKanban className="h-2.5 w-2.5 text-amber-700" />
+                                    {form.project_name}
+                                  </span>
+                                )}
                               </div>
+                              {form.name && <div className="text-[11px] text-[#5a6a82] mt-0.5 truncate">{form.name}</div>}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                            {/* Active / Inactive Toggle Switch */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMetaFormStatus(form)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer border ${
+                                form.is_active !== false
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                  : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'
+                              }`}
+                              title={form.is_active !== false ? 'Click to deactivate (leads will be blocked)' : 'Click to activate'}
+                            >
+                              <span className={`h-2 w-2 rounded-full ${form.is_active !== false ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                              {form.is_active !== false ? 'Active' : 'Inactive'}
+                            </button>
+
+                            {editingMetaFormId !== form.id && (
                               <button
                                 onClick={() => {
                                   setEditingMetaFormId(form.id)
@@ -1916,20 +2092,20 @@ export default function LeadsClient({
                                 className="text-[#5a6a82] hover:text-[#0f1d33] p-1.5 hover:bg-[#f3f5f8] rounded-md transition-colors"
                                 title="Edit Name"
                               >
-                                <Edit2 className="w-4 h-4" />
+                                <Edit2 className="w-3.5 h-3.5" />
                               </button>
-                            </div>
-                          )}
-                          
-                          {editingMetaFormId !== form.id && (
-                            <button
-                              onClick={() => handleDeleteMetaForm(form.id)}
-                              className="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-md transition-colors"
-                              title="Remove Form"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                            )}
+
+                            {editingMetaFormId !== form.id && (
+                              <button
+                                onClick={() => handleDeleteMetaForm(form.id)}
+                                className="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-md transition-colors"
+                                title="Remove Form"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>

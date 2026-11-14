@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users2,
-  MessageCircle,
+  Inbox,
   BarChart3,
   Sliders,
   ShieldCheck,
@@ -55,9 +55,9 @@ export function Sidebar({
       icon: Users2,
     },
     {
-      title: 'WhatsApp Hub',
+      title: 'Inbox',
       href: '/crm/whatsapp',
-      icon: MessageCircle,
+      icon: Inbox,
     },
     {
       title: 'Reports & Analytics',

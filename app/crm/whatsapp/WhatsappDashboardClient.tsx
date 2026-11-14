@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { MessageCircle, Download, PhoneCall, MapPin, X, ArrowRight, Activity, Clock, ShieldAlert } from 'lucide-react'
+import { Inbox, Download, X, ArrowRight, Clock, MessageSquare, Phone, Mail, Building, FileText } from 'lucide-react'
 import { getWhatsappLeadsWithActivity } from './actions'
 
 const extractIncomingMessage = (details: string) => {
@@ -62,15 +62,74 @@ const extractMediaInfo = (details: string) => {
   return { mediaId, type, mime };
 };
 
+const extractFormDetails = (lead: any) => {
+  const source = lead.source_page || '';
+  if (lead.form_id || lead.form_name) {
+    return {
+      name: lead.form_name || '-',
+      id: lead.form_id || '-'
+    };
+  }
+  if (source.includes('Meta:')) {
+    const raw = source.replace(/.*Meta:\s*/, '').trim();
+    const match = raw.match(/^(.*?)\s*\((.*?)\)/);
+    if (match) {
+      return {
+        name: match[1].trim(),
+        id: match[2].trim()
+      };
+    }
+    return {
+      name: raw,
+      id: '-'
+    };
+  }
+  const genericMatch = source.match(/^(.*?)\s*\(([0-9]+)\)/);
+  if (genericMatch) {
+    return {
+      name: genericMatch[1].trim(),
+      id: genericMatch[2].trim()
+    };
+  }
+  if (source && source !== 'contact') {
+    return {
+      name: source,
+      id: '-'
+    };
+  }
+  return {
+    name: source || '-',
+    id: '-'
+  };
+};
+
+const extractLeadMessageText = (lead: any) => {
+  if (lead.message && lead.message.trim() && lead.message !== '(no text content)') {
+    return lead.message.trim();
+  }
+  const activities = lead.lead_activities || [];
+  if (activities.length > 0) {
+    for (let i = activities.length - 1; i >= 0; i--) {
+      const desc = activities[i].description;
+      if (desc) {
+        const parsed = extractIncomingMessage(desc);
+        if (parsed && parsed !== '(no text content)') {
+          return parsed;
+        }
+      }
+    }
+  }
+  return '-';
+};
+
 export default function WhatsappDashboardClient({ 
   initialLeads, 
   totalCount = 0, 
-  initialAnalytics,
   userRole 
 }: { 
   initialLeads: any[], 
   totalCount?: number, 
-  initialAnalytics?: { totalLeads: number, totalInteractions: number, totalCallbacks: number },
+  initialAnalytics?: any,
   userRole: string 
 }) {
   const [leads, setLeads] = useState(initialLeads)
@@ -135,53 +194,37 @@ export default function WhatsappDashboardClient({
     }
   };
 
-  // Analytics
-  const totalLeads = initialAnalytics?.totalLeads || totalLeadsCount
-  const totalInteractions = initialAnalytics?.totalInteractions || 0
-  const totalCallbacks = initialAnalytics?.totalCallbacks || 0
-
   // Process leads for the table
   const processedLeads = useMemo(() => {
     return leads.map(lead => {
-      const activities = lead.lead_activities || []
-      
-      // Get all downloaded items
-      const downloads = activities
-        .filter((a: any) => a.activity_type.includes('Downloaded'))
-        .map((a: any) => ({ type: a.activity_type, project: a.details }))
-
-      // Check for callback
-      const requestedCallback = activities.some((a: any) => a.activity_type === 'Requested Callback')
-
-      // Get latest area and project
-      const latestArea = activities.slice().reverse().find((a: any) => a.activity_type === 'Area Selected')?.details || '-'
-      const latestProject = activities.slice().reverse().find((a: any) => a.activity_type === 'Project Selected')?.details || '-'
-
-      // Last active
-      const lastActive = activities.length > 0 ? activities[activities.length - 1].created_at : lead.updated_at
+      const activities = lead.lead_activities || [];
+      const formInfo = extractFormDetails(lead);
+      const messageText = extractLeadMessageText(lead);
+      const lastActive = activities.length > 0 ? activities[activities.length - 1].created_at : (lead.created_at || lead.updated_at);
 
       return {
         ...lead,
-        downloads,
-        requestedCallback,
-        latestArea,
-        latestProject,
+        formId: formInfo.id,
+        formName: formInfo.name,
+        messageText,
         lastActive
-      }
-    }).sort((a, b) => new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime())
-  }, [leads])
+      };
+    }).sort((a, b) => new Date(b.lastActive || b.created_at).getTime() - new Date(a.lastActive || a.created_at).getTime());
+  }, [leads]);
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Phone', 'Bot Interactions', 'Callback Requested', 'Latest Area', 'Latest Project', 'Last Active'];
+    const headers = ['Sr. No', 'Name', 'Phone', 'Email', 'Project', 'Form ID', 'Form Name', 'Message', 'Date'];
     const csvContent = [
       headers.join(','),
-      ...processedLeads.map(lead => [
-        `"${lead.name || ''}"`,
-        `"${lead.phone || ''}"`,
-        lead.bot_interactions_count || 1,
-        lead.requestedCallback ? 'YES' : 'NO',
-        `"${lead.latestArea || ''}"`,
-        `"${lead.latestProject || ''}"`,
+      ...processedLeads.map((lead, index) => [
+        (currentPage - 1) * pageSize + index + 1,
+        `"${(lead.name || '').replace(/"/g, '""')}"`,
+        `"${(lead.phone || '').replace(/"/g, '""')}"`,
+        `"${(lead.email || '').replace(/"/g, '""')}"`,
+        `"${(lead.project || '-').replace(/"/g, '""')}"`,
+        `"${(lead.formId || '-').replace(/"/g, '""')}"`,
+        `"${(lead.formName || '-').replace(/"/g, '""')}"`,
+        `"${(lead.messageText || '-').replace(/"/g, '""')}"`,
         `"${new Date(lead.lastActive).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}"`
       ].join(','))
     ].join('\n');
@@ -190,7 +233,7 @@ export default function WhatsappDashboardClient({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `whatsapp_leads_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `inbox_leads_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -198,163 +241,126 @@ export default function WhatsappDashboardClient({
 
   return (
     <div className="flex flex-col min-h-full bg-[#f7f8fa] overflow-y-auto md:overflow-hidden md:h-full">
-      <div className="p-4 md:p-8 pb-4 md:pb-4 flex-shrink-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
+      {/* Header Bar */}
+      <div className="p-4 md:p-8 pb-4 md:pb-5 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#0f1d33] flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
-              WhatsApp Command Center
+            <h1 className="text-xl md:text-2xl font-bold text-[#0f1d33] flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-[#0f1d33] flex items-center justify-center text-white shadow-xs">
+                <Inbox className="h-5 w-5 text-white" />
+              </div>
+              Inbox
             </h1>
-            <p className="text-sm md:text-base text-[#5a6a82] mt-1">Detailed tracking and analytics for all WhatsApp bot interactions.</p>
+            <p className="text-xs sm:text-sm text-[#5a6a82] mt-1">
+              Incoming customer inquiries, messages, and form submissions.
+            </p>
           </div>
+
           <button
             onClick={exportToCSV}
-            className="w-full sm:w-auto justify-center gradient-gold text-white font-semibold px-4 py-2.5 rounded-lg shadow-lg shadow-[#c4a55a]/20 flex items-center gap-2 hover:opacity-90 transition-opacity"
+            className="inline-flex items-center justify-center gap-2 bg-[#0f1d33] hover:bg-[#1e3a5f] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98] shrink-0"
           >
             <Download className="h-4 w-4" />
             Export Data
           </button>
         </div>
-
-        {/* Analytics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-8">
-          <div className="bg-white rounded-xl p-4 md:p-6 border border-[#e8ecf2] shadow-sm flex items-center gap-4">
-            <div className="bg-blue-50 p-2 md:p-3 rounded-lg text-blue-600">
-              <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
-            </div>
-            <div>
-              <p className="text-xs md:text-sm text-[#5a6a82] font-medium">Total WhatsApp Leads</p>
-              <h3 className="text-xl md:text-2xl font-bold text-[#0f1d33]">{totalLeads}</h3>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 md:p-6 border border-[#e8ecf2] shadow-sm flex items-center gap-4">
-            <div className="bg-purple-50 p-2 md:p-3 rounded-lg text-purple-600">
-              <Activity className="h-5 w-5 md:h-6 md:w-6" />
-            </div>
-            <div>
-              <p className="text-xs md:text-sm text-[#5a6a82] font-medium">Total Interactions</p>
-              <h3 className="text-xl md:text-2xl font-bold text-[#0f1d33]">{totalInteractions}</h3>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 md:p-6 border border-[#e8ecf2] shadow-sm flex items-center gap-4">
-            <div className="bg-orange-50 p-2 md:p-3 rounded-lg text-orange-600">
-              <PhoneCall className="h-5 w-5 md:h-6 md:w-6" />
-            </div>
-            <div>
-              <p className="text-xs md:text-sm text-[#5a6a82] font-medium">Callbacks Requested</p>
-              <h3 className="text-xl md:text-2xl font-bold text-[#0f1d33]">{totalCallbacks}</h3>
-            </div>
-          </div>
-        </div>
       </div>
 
+      {/* Main Inbox Table Container */}
       <div className="flex-1 px-4 md:px-8 pb-4 md:pb-8 flex flex-col min-h-0">
-        <div className="bg-white rounded-xl border border-[#e8ecf2] shadow-sm flex flex-col md:overflow-hidden h-auto md:h-full">
+        <div className="bg-white rounded-xl border border-[#e8ecf2] shadow-xs flex flex-col md:overflow-hidden h-auto md:h-full">
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-auto">
             <table className="w-full text-left text-xs text-[#5a6a82] relative">
-              <thead className="bg-[#f3f5f8] text-xs uppercase font-semibold text-[#1e3a5f] sticky top-0 z-10">
+              <thead className="bg-[#f3f5f8] text-xs uppercase font-semibold text-[#1e3a5f] sticky top-0 z-10 border-b border-[#e8ecf2]">
                 <tr>
-                  <th className="px-3 py-2 w-12 text-[#1e3a5f]">Sr. No</th>
-                  <th className="px-3 py-2">Lead Info</th>
-                  <th className="px-3 py-2 text-[#1e3a5f]">Latest Interest</th>
-                  <th className="px-3 py-2">Downloads</th>
-                  <th className="px-3 py-2 text-center">Callback Requested?</th>
-                  <th className="px-3 py-2">Last Active</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
+                  <th className="px-4 py-3 w-16 text-[#1e3a5f]">Sr. No</th>
+                  <th className="px-4 py-3 w-72">Lead Info</th>
+                  <th className="px-4 py-3 w-52">Project</th>
+                  <th className="px-4 py-3 w-64">Form ID & Form Name</th>
+                  <th className="px-4 py-3">Message</th>
+                  <th className="px-4 py-3 w-28 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e8ecf2]">
                 {processedLeads.length > 0 ? (
                   processedLeads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-[#f8fafc] transition-colors">
-                      <td className="px-3 py-2 text-[#5a6a82] font-medium">
+                      {/* Sr. No */}
+                      <td className="px-4 py-3 text-[#5a6a82] font-semibold">
                         {(currentPage - 1) * pageSize + processedLeads.indexOf(lead) + 1}
                       </td>
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-[#0f1d33]">{lead.name}</div>
-                        <div className="text-xs text-[#5a6a82]">{lead.phone}</div>
-                        {lead.bot_interactions_count > 1 && (
-                          <span className="inline-flex mt-1 items-center rounded bg-[#c4a55a]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#c4a55a] border border-[#c4a55a]/20">
-                            {lead.bot_interactions_count}x Returns
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        {lead.latestProject !== '-' && (
-                          <div className="font-medium text-[#1e3a5f]">{lead.latestProject}</div>
-                        )}
-                        {lead.latestArea !== '-' && (
-                          <div className="inline-flex items-center gap-1 text-xs text-[#5a6a82] mt-0.5">
-                            <MapPin className="h-3 w-3 text-gray-400" />
-                            {lead.latestArea}
+
+                      {/* Lead Info */}
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-sm text-[#0f1d33]">{lead.name || 'Anonymous Lead'}</div>
+                        <div className="flex items-center gap-1.5 text-xs text-[#5a6a82] mt-0.5">
+                          <Phone className="h-3 w-3 text-[#8a99ad] shrink-0" />
+                          <span>{lead.phone || '-'}</span>
+                        </div>
+                        {lead.email && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#8a99ad] truncate mt-0.5 max-w-[240px]" title={lead.email}>
+                            <Mail className="h-3 w-3 text-[#8a99ad] shrink-0" />
+                            <span className="truncate">{lead.email}</span>
                           </div>
                         )}
-                        {lead.latestProject === '-' && lead.latestArea === '-' && (
-                          <span className="text-gray-400 italic">None</span>
-                        )}
                       </td>
-                      <td className="px-3 py-2">
-                        {lead.downloads.length > 0 ? (
-                          <div className="flex flex-col gap-1.5">
-                            {lead.downloads.slice(0, 2).map((d: any, idx: number) => (
-                              <div key={idx} className="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded max-w-[220px]" title={`${d.type.replace('Downloaded ', '')} (${d.project})`}>
-                                <Download className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{d.type.replace('Downloaded ', '')} ({d.project})</span>
-                              </div>
-                            ))}
-                            {lead.downloads.length > 2 && (
-                              <div className="text-[10px] font-bold text-[#5a6a82] uppercase tracking-wider pl-1 mt-0.5">
-                                +{lead.downloads.length - 2} More
-                              </div>
-                            )}
+
+                      {/* Project */}
+                      <td className="px-4 py-3">
+                        {lead.project || lead.property_interest ? (
+                          <div className="inline-flex items-center gap-1.5 font-medium text-[#0f1d33] bg-[#f8fafc] px-2.5 py-1 rounded-lg border border-[#e8ecf2]">
+                            <Building className="h-3.5 w-3.5 text-[#5a6a82] shrink-0" />
+                            <span className="truncate max-w-[180px]">{lead.project || lead.property_interest}</span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">None</span>
+                          <span className="text-gray-400 italic">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        {lead.requestedCallback ? (
-                          <div className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-bold shadow-sm">
-                            <PhoneCall className="h-4 w-4" />
-                            YES
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full font-medium">
-                            <X className="h-4 w-4" />
-                            NO
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 text-xs text-[#5a6a82]">
-                          <Clock className="h-3.5 w-3.5 text-[#1e3a5f]/60" />
-                          <span className="font-medium">
-                            {new Date(lead.lastActive).toLocaleString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
+
+                      {/* Form ID & Form Name */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#0f1d33]">
+                            <FileText className="h-3 w-3 text-[#5a6a82] shrink-0" />
+                            <span className="truncate max-w-[200px]" title={lead.formName}>{lead.formName !== '-' ? lead.formName : 'Direct Inquiry'}</span>
                           </span>
+                          {lead.formId && lead.formId !== '-' && (
+                            <span className="text-[10px] font-mono text-[#5a6a82] bg-[#eef2f6] px-1.5 py-0.5 rounded border border-[#e2e8f0]">
+                              ID: {lead.formId}
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-right">
+
+                      {/* Message */}
+                      <td className="px-4 py-3">
+                        <div className="text-xs text-[#334155] leading-relaxed max-w-lg line-clamp-2" title={lead.messageText}>
+                          {lead.messageText}
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => setSelectedLead(lead)}
-                          className="inline-flex items-center gap-2 bg-[#1e3a5f] text-white px-3.5 py-2 rounded-lg hover:bg-[#0f1d33] active:scale-[0.98] transition-all text-xs font-semibold shadow-xs"
+                          className="inline-flex items-center gap-1.5 bg-[#f1f4f8] hover:bg-[#0f1d33] text-[#0f1d33] hover:text-white px-3 py-1.5 rounded-lg transition-all text-xs font-semibold shrink-0"
+                          title="View activity history"
                         >
-                          View Chat History <ArrowRight className="h-3.5 w-3.5 text-[#c4a55a]" />
+                          <span>History</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-[#5a6a82]">
-                      No WhatsApp leads found.
+                    <td colSpan={6} className="px-6 py-12 text-center text-[#5a6a82]">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Inbox className="h-8 w-8 text-[#8a99ad]" />
+                        <span className="font-medium text-sm">No inbox messages found.</span>
+                        <p className="text-xs text-[#8a99ad]">Incoming leads and inquiries will appear here automatically.</p>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -367,93 +373,72 @@ export default function WhatsappDashboardClient({
             {processedLeads.length > 0 ? (
               processedLeads.map((lead) => (
                 <div key={`mobile-lead-${lead.id}`} className="p-4 flex flex-col gap-3 hover:bg-[#f8fafc] transition-colors">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-2">
                     <div>
-                      <div className="font-semibold text-[#0f1d33] text-base">{lead.name}</div>
-                      <div className="text-sm text-[#5a6a82] font-medium">{lead.phone}</div>
-                      {lead.bot_interactions_count > 1 && (
-                        <span className="inline-flex mt-1 items-center rounded bg-[#c4a55a]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#c4a55a] border border-[#c4a55a]/20">
-                          {lead.bot_interactions_count}x Returns
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#5a6a82] bg-[#f1f4f8] px-2 py-0.5 rounded">
+                          #{(currentPage - 1) * pageSize + processedLeads.indexOf(lead) + 1}
                         </span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      {lead.requestedCallback ? (
-                        <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm">
-                          <PhoneCall className="h-3 w-3" /> YES
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs font-medium">
-                          <X className="h-3 w-3" /> NO
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1 mt-1">
-                    <span className="text-xs text-[#5a6a82]">Latest Interest</span>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {lead.latestProject !== '-' && (
-                        <span className="inline-flex items-center gap-1 bg-[#f3f5f8] px-2 py-1 rounded text-[#1e3a5f] text-xs font-medium border border-[#e8ecf2]">
-                          <span className="truncate">{lead.latestProject}</span>
-                        </span>
-                      )}
-                      {lead.latestArea !== '-' && (
-                        <span className="inline-flex items-center gap-1 bg-gray-50 px-2 py-1 rounded text-[#1e3a5f] text-xs font-medium border border-[#e8ecf2]">
-                          <MapPin className="h-3 w-3 text-gray-400" />
-                          <span className="truncate">{lead.latestArea}</span>
-                        </span>
-                      )}
-                      {lead.latestProject === '-' && lead.latestArea === '-' && (
-                        <span className="text-gray-400 italic text-xs">None</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1 mt-1">
-                    <span className="text-xs text-[#5a6a82]">Downloads</span>
-                    {lead.downloads.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {lead.downloads.map((d: any, idx: number) => (
-                          <div key={idx} className="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 max-w-full">
-                            <Download className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{d.type.replace('Downloaded ', '')} ({d.project})</span>
-                          </div>
-                        ))}
+                        <div className="font-semibold text-[#0f1d33] text-base">{lead.name || 'Anonymous Lead'}</div>
                       </div>
-                    ) : (
-                      <span className="text-gray-400 italic text-xs">None</span>
-                    )}
+                      <div className="text-xs text-[#5a6a82] mt-1 flex items-center gap-1.5">
+                        <Phone className="h-3 w-3 text-[#8a99ad]" />
+                        {lead.phone || '-'}
+                      </div>
+                      {lead.email && (
+                        <div className="text-xs text-[#8a99ad] mt-0.5 flex items-center gap-1.5 truncate">
+                          <Mail className="h-3 w-3 text-[#8a99ad]" />
+                          {lead.email}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3 pt-3 border-t border-[#e8ecf2]">
-                    <div className="flex items-center gap-2 text-xs text-[#5a6a82] bg-[#f8fafc] px-3 py-1.5 rounded-lg border border-[#e8ecf2]/80 w-fit">
-                      <Clock className="h-3.5 w-3.5 text-[#1e3a5f] shrink-0" />
-                      <span className="text-[#8795a8] text-[11px] font-medium">Last Active:</span>
-                      <span className="font-semibold text-[#0f1d33]">
-                        {new Date(lead.lastActive).toLocaleString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true
-                        })}
+                  {/* Project & Form Info */}
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                    <div>
+                      <span className="text-[11px] font-medium text-[#8a99ad] block mb-0.5">Project</span>
+                      <span className="font-semibold text-[#0f1d33] truncate block">
+                        {lead.project || lead.property_interest || '-'}
                       </span>
                     </div>
+                    <div>
+                      <span className="text-[11px] font-medium text-[#8a99ad] block mb-0.5">Form ID & Name</span>
+                      <div className="truncate">
+                        <span className="font-semibold text-[#0f1d33] block truncate">{lead.formName || '-'}</span>
+                        {lead.formId && lead.formId !== '-' && (
+                          <span className="text-[10px] font-mono text-[#5a6a82] bg-[#eef2f6] px-1 rounded">
+                            ID: {lead.formId}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Message */}
+                  <div className="bg-[#f8fafc] p-2.5 rounded-lg border border-[#e8ecf2] mt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#8a99ad] block mb-1">Message</span>
+                    <p className="text-xs text-[#334155] leading-relaxed line-clamp-3">
+                      {lead.messageText}
+                    </p>
+                  </div>
+
+                  {/* Action */}
+                  <div className="flex justify-end pt-1">
                     <button
                       onClick={() => setSelectedLead(lead)}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#1e3a5f] text-white px-4 py-2.5 rounded-xl hover:bg-[#0f1d33] active:scale-[0.98] transition-all text-xs font-semibold shadow-xs"
+                      className="inline-flex items-center gap-1.5 bg-[#0f1d33] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold"
                     >
-                      <span>View Chat History</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-[#c4a55a]" />
+                      <span>View History</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
               ))
             ) : (
               <div className="p-8 text-center text-[#5a6a82]">
-                No WhatsApp leads found.
+                <Inbox className="h-8 w-8 text-[#8a99ad] mx-auto mb-2" />
+                <span className="font-medium text-sm">No inbox messages found.</span>
               </div>
             )}
           </div>
@@ -482,7 +467,7 @@ export default function WhatsappDashboardClient({
                   <p className="text-sm text-gray-700">
                     Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(currentPage * pageSize, totalLeadsCount)}</span> of{' '}
                     <span className="font-medium">{totalLeadsCount}</span> results
-                    {isPageLoading && <span className="ml-2 text-[#c4a55a]">Loading...</span>}
+                    {isPageLoading && <span className="ml-2 text-[#0f1d33] font-medium">Loading...</span>}
                   </p>
                 </div>
                 <div>
@@ -523,12 +508,12 @@ export default function WhatsappDashboardClient({
             
             <div className="flex items-center justify-between p-6 border-b border-[#e8ecf2] bg-[#f3f5f8]">
               <div className="flex items-center gap-3">
-                <div className="bg-green-100 p-2.5 rounded-full text-green-600">
-                  <MessageCircle className="w-6 h-6" />
+                <div className="bg-[#0f1d33] p-2.5 rounded-xl text-white">
+                  <Inbox className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-[#0f1d33]">Full Activity Log</h2>
-                  <p className="text-sm text-[#5a6a82]">{selectedLead.name} ({selectedLead.phone})</p>
+                  <h2 className="text-lg font-bold text-[#0f1d33]">Message & Activity Log</h2>
+                  <p className="text-xs text-[#5a6a82]">{selectedLead.name} ({selectedLead.phone || '-'})</p>
                 </div>
               </div>
               <button onClick={() => setSelectedLead(null)} className="p-2 text-[#5a6a82] hover:text-[#0f1d33] hover:bg-white rounded-lg transition-colors">
@@ -536,96 +521,70 @@ export default function WhatsappDashboardClient({
               </button>
             </div>
 
-            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 bg-[#efeae2] flex flex-col relative overscroll-contain">
+            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 bg-[#f8fafc] flex flex-col relative overscroll-contain">
               <div className="relative z-10 flex flex-col gap-3 pb-4">
-              {selectedLead.lead_activities?.length > 0 ? (
-                selectedLead.lead_activities.map((activity: any, idx: number) => {
-                  const type = activity.activity_type.toLowerCase();
-                  const time = new Date(activity.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
-                  
-                  if (type.includes('incoming whatsapp')) {
-                    const msg = extractIncomingMessage(activity.details);
-                    const media = extractMediaInfo(activity.details);
-                    return (
-                      <div key={idx} className="flex flex-col items-end self-end max-w-[85%] mt-1">
-                        <div className="bg-[#d9fdd3] text-[#111b21] px-3 pt-2 pb-1.5 rounded-lg rounded-tr-none shadow-sm relative text-sm border border-[#c3e8bd]">
-                           <span className="font-bold text-[#025c4c] text-[11px] leading-tight block mb-0.5">{selectedLead.name || 'User'}</span>
-                           <div className="whitespace-pre-wrap leading-snug">{msg}</div>
-                           {media && (
-                             <div className="mt-2 rounded-lg overflow-hidden border border-[#c3e8bd]/60 bg-black/5">
-                               {media.type === 'video' || media.mime.startsWith('video/') ? (
-                                 <video
-                                   controls
-                                   playsInline
-                                   className="rounded-lg max-w-full max-h-60 bg-black"
-                                   src={`/api/whatsapp/media/${media.mediaId}`}
-                                 />
-                               ) : media.type === 'image' || media.mime.startsWith('image/') ? (
-                                 <img
-                                   src={`/api/whatsapp/media/${media.mediaId}`}
-                                   alt="Attachment"
-                                   className="rounded-lg max-w-full max-h-60 object-cover cursor-pointer hover:opacity-95"
-                                   onClick={() => window.open(`/api/whatsapp/media/${media.mediaId}`, '_blank')}
-                                 />
-                               ) : media.type === 'audio' || media.mime.startsWith('audio/') ? (
-                                 <audio
-                                   controls
-                                   className="w-full max-w-xs mt-1"
-                                   src={`/api/whatsapp/media/${media.mediaId}`}
-                                 />
-                               ) : (
-                                 <a
-                                   href={`/api/whatsapp/media/${media.mediaId}`}
-                                   download
-                                   target="_blank"
-                                   rel="noopener noreferrer"
-                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs font-semibold rounded-md border border-[#c3e8bd] text-[#025c4c] hover:bg-[#d9fdd3] transition-colors"
-                                 >
-                                   📎 Download Attachment
-                                 </a>
-                               )}
-                             </div>
-                           )}
-                           <div className="text-[10px] text-[#667781] text-right mt-1 -mb-0.5 ml-4 float-right">{time}</div>
+                {/* Lead Overview Card */}
+                <div className="bg-white p-3.5 rounded-xl border border-[#e8ecf2] shadow-xs text-xs space-y-1.5">
+                  <div className="flex justify-between items-center text-[#5a6a82]">
+                    <span>Project:</span>
+                    <span className="font-semibold text-[#0f1d33]">{selectedLead.project || selectedLead.property_interest || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[#5a6a82]">
+                    <span>Form Name:</span>
+                    <span className="font-semibold text-[#0f1d33]">{selectedLead.formName || '-'}</span>
+                  </div>
+                  {selectedLead.formId && selectedLead.formId !== '-' && (
+                    <div className="flex justify-between items-center text-[#5a6a82]">
+                      <span>Form ID:</span>
+                      <span className="font-mono text-[#0f1d33]">{selectedLead.formId}</span>
+                    </div>
+                  )}
+                  {selectedLead.message && (
+                    <div className="pt-1.5 border-t border-[#f1f4f8]">
+                      <span className="text-[#8a99ad] block mb-0.5">Initial Message:</span>
+                      <p className="text-[#0f1d33] font-medium">{selectedLead.message}</p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedLead.lead_activities?.length > 0 ? (
+                  selectedLead.lead_activities.map((activity: any, idx: number) => {
+                    const type = activity.activity_type.toLowerCase();
+                    const time = new Date(activity.created_at).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+                    
+                    if (type.includes('incoming whatsapp')) {
+                      const msg = extractIncomingMessage(activity.details);
+                      const media = extractMediaInfo(activity.details);
+                      return (
+                        <div key={idx} className="flex flex-col items-end self-end max-w-[85%] mt-1">
+                          <div className="bg-[#e8f5e9] text-[#0f1d33] rounded-2xl rounded-tr-xs p-3 shadow-xs border border-green-200">
+                            {media && (
+                              <div className="mb-2 p-2 bg-white rounded-lg border border-green-200 flex items-center gap-2">
+                                <span className="text-[11px] font-semibold text-green-700 capitalize">{media.type} Attached</span>
+                              </div>
+                            )}
+                            <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg}</p>
+                            <span className="text-[9px] text-green-800/70 block text-right mt-1 font-medium">{time}</span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }
-                  
-                  if (type.includes('outgoing whatsapp')) {
+                      )
+                    }
+
                     return (
                       <div key={idx} className="flex flex-col items-start self-start max-w-[85%] mt-1">
-                        <div className="bg-white text-[#111b21] px-3 pt-2 pb-1.5 rounded-lg rounded-tl-none shadow-sm relative text-sm border border-[#e8ecf2]">
-                           <span className="font-bold text-[#c4a55a] text-[11px] leading-tight block mb-0.5">CRM Bot</span>
-                           <div className="whitespace-pre-wrap leading-snug">{activity.details}</div>
-                           <div className="text-[10px] text-[#667781] text-right mt-1 -mb-0.5 ml-4 float-right">{time}</div>
+                        <div className="bg-white text-[#0f1d33] rounded-2xl rounded-tl-xs p-3 shadow-xs border border-[#e8ecf2]">
+                          <span className="text-[10px] font-bold text-[#1e3a5f] block mb-0.5 uppercase tracking-wider">{activity.activity_type}</span>
+                          <p className="text-xs leading-relaxed whitespace-pre-wrap">{activity.details || activity.description || 'Action recorded'}</p>
+                          <span className="text-[9px] text-[#8a99ad] block text-left mt-1 font-medium">{time}</span>
                         </div>
                       </div>
-                    );
-                  }
-                  
-                  // System Chip
-                  let chipText = activity.activity_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-                  if (type === 'bot started') chipText = 'Bot Started Conversation';
-                  else if (activity.details && !activity.details.includes('Provider timestamp')) {
-                    chipText = `${chipText}: ${activity.details}`;
-                  }
-                  
-                  return (
-                    <div key={idx} className="flex justify-center my-2">
-                      <div className="bg-[#f3f5f8] text-[#5a6a82] px-3 py-1.5 rounded-full text-[11px] font-medium shadow-sm border border-[#e8ecf2]">
-                        {chipText} • {time}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-[#5a6a82] mt-20">
-                  <MessageCircle className="h-12 w-12 text-[#5a6a82]/30 mb-4" />
-                  <p>No messages recorded yet.</p>
-                </div>
-              )}
-
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-8 text-[#8a99ad] text-xs">
+                    No further chat interactions recorded for this lead.
+                  </div>
+                )}
               </div>
             </div>
           </div>

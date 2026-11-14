@@ -6,6 +6,11 @@ import { requireAccess } from '@/lib/auth/permissions'
 
 export const dynamic = 'force-dynamic'
 
+export const metadata = {
+  title: 'Inbox | CRM',
+  description: 'Incoming customer inquiries, form submissions, and messages',
+}
+
 export default async function WhatsappDashboardPage() {
   await requireAccess('whatsapp')
   const supabase = await createClient()

@@ -7,7 +7,7 @@ import { getRolePermissions, updateRolePermissions, getUserPermissions, updateUs
 const CRM_MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'leads', label: 'Leads' },
-  { id: 'whatsapp', label: 'WhatsApp Leads' },
+  { id: 'whatsapp', label: 'Inbox' },
   { id: 'reports', label: 'Reports' },
   { id: 'modules', label: 'Modules' },
   { id: 'users', label: 'Users' },

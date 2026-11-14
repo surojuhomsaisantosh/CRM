@@ -7,20 +7,19 @@ export async function getWhatsappLeadsWithActivity(page: number = 1, limit: numb
   const from = (page - 1) * limit
   const to = from + limit - 1
   
-  // Fetch leads where source_page contains whatsapp, and join their activities
+  // Fetch inbox leads and join their activities
   const { data, error, count } = await supabase
     .from('leads')
     .select(`
       *,
       lead_activities (*)
     `, { count: 'exact' })
-    .ilike('source_page', '%whatsapp%')
-    .order('updated_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .range(from, to)
 
   if (error) {
-    console.error('Error fetching whatsapp leads:', error)
-    return { data: [], count: 0, error: 'Failed to fetch WhatsApp leads' }
+    console.error('Error fetching inbox leads:', error)
+    return { data: [], count: 0, error: 'Failed to fetch inbox leads' }
   }
 
   // Ensure activities are ordered by created_at ascending (chronological) for each lead

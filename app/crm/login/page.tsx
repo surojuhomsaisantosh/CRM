@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Building2, Eye, EyeOff, Loader2, Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { BrandLogo } from '@/components/branding/BrandLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,8 +78,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0f1d33] to-[#1e3a5f] shadow-lg shadow-[#0f1d33]/10 text-[#c4a55a] mb-1">
-            <Building2 className="w-8 h-8" />
+          <div className="inline-flex items-center justify-center mb-1">
+            <BrandLogo size="lg" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f1d33] tracking-tight">
             C<span className="text-[#c4a55a]">RM</span>

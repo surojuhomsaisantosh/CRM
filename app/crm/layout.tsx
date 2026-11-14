@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar"
 import { createClient } from "@/lib/supabase/client"
 import { Building2, Menu, X } from "lucide-react"
 import Link from "next/link"
+import { BrandLogo } from "@/components/branding/BrandLogo"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -44,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile Top Bar */}
       <div className="md:hidden flex items-center justify-between bg-white border-b border-[#e8ecf2] h-16 px-4 shrink-0 absolute top-0 w-full z-20">
         <Link href="/crm" className="flex items-center gap-2 font-bold text-lg tracking-tight text-[#0f1d33]" onClick={() => setIsMobileMenuOpen(false)}>
-          <Building2 className="h-6 w-6 text-[#c4a55a]" />
+          <BrandLogo size="sm" />
           <span>C<span className="text-[#c4a55a]">RM</span></span>
         </Link>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 -mr-2 text-[#5a6a82] hover:text-[#0f1d33] transition-colors" aria-label="Toggle navigation menu">

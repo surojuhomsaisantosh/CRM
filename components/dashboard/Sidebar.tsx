@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { BrandLogo } from '@/components/branding/BrandLogo';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -112,9 +113,7 @@ export function Sidebar({
           onClick={onNavigate}
           className="flex items-center gap-2.5 overflow-hidden transition-opacity hover:opacity-90"
         >
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-[#0f1d33] to-[#1e3a5f] text-[#c4a55a] shrink-0 shadow-sm">
-            <Building2 className="w-5 h-5" />
-          </div>
+          <BrandLogo size="md" />
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
               <span className="text-base font-bold tracking-tight text-[#0f1d33] truncate">

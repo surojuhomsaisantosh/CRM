@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Key, Eye, EyeOff } from 'lucide-react'
+import BrandingSettings from './components/BrandingSettings'
 
 export default function SettingsClient() {
   const [newPassword, setNewPassword] = useState('')
@@ -52,13 +53,16 @@ export default function SettingsClient() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-8 max-w-3xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-[#0f1d33]">Settings</h1>
         <p className="mt-2 text-sm text-[#5a6a82]">
-          Manage your account settings and preferences.
+          Manage your brand appearance, logo, color palette, and account security.
         </p>
       </div>
+
+      {/* Brand & Appearance Settings (Choose Logo & Color Palette) */}
+      <BrandingSettings />
       
       <div className="rounded-xl border border-[#e8ecf2] bg-white shadow-sm overflow-hidden">
         <div className="border-b border-[#e8ecf2] px-6 py-5">

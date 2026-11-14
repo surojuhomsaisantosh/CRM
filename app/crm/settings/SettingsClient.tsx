@@ -4,6 +4,8 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Key, Eye, EyeOff } from 'lucide-react'
 import BrandingSettings from './brand-settings/BrandingSettings'
+import { PasswordChecklist } from '@/lib/auth/PasswordChecklist'
+import { validatePasswordPolicy } from '@/lib/auth/password-policy'
 
 export default function SettingsClient() {
   const [newPassword, setNewPassword] = useState('')
@@ -16,13 +18,15 @@ export default function SettingsClient() {
 
   const supabase = createClient()
 
+  const policy = validatePasswordPolicy(newPassword)
+
   async function handleUpdatePassword(e: React.FormEvent) {
     e.preventDefault()
     if (isSubmittingRef.current) return
     setMessage(null)
     
-    if (newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters long.' })
+    if (!policy.isValid) {
+      setMessage({ type: 'error', text: 'Password must satisfy all policy requirements (12-20 characters, 1 uppercase, 1 number, 1 special character).' })
       return
     }
 
@@ -99,19 +103,23 @@ export default function SettingsClient() {
                     <input
                       type={showPassword ? "text" : "password"}
                       required
+                      minLength={12}
+                      maxLength={20}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full rounded-xl border border-[#d5dce6] px-3.5 py-2.5 pr-10 text-sm focus:border-[#0f1d33] focus:outline-none focus:ring-1 focus:ring-[#0f1d33]"
-                      placeholder="Enter new password (min. 6 chars)"
+                      placeholder="Enter new password (12-20 characters)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#5a6a82] hover:text-[#0f1d33]"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#5a6a82] hover:text-[#0f1d33] cursor-pointer"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {/* Password Checklist */}
+                  <PasswordChecklist password={newPassword} className="mt-2" />
                 </div>
                 
                 <div>
@@ -122,6 +130,8 @@ export default function SettingsClient() {
                     <input
                       type={showConfirmPassword ? "text" : "password"}
                       required
+                      minLength={12}
+                      maxLength={20}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full rounded-xl border border-[#d5dce6] px-3.5 py-2.5 pr-10 text-sm focus:border-[#0f1d33] focus:outline-none focus:ring-1 focus:ring-[#0f1d33]"
@@ -130,7 +140,7 @@ export default function SettingsClient() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#5a6a82] hover:text-[#0f1d33]"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#5a6a82] hover:text-[#0f1d33] cursor-pointer"
                     >
                       {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -140,8 +150,8 @@ export default function SettingsClient() {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !newPassword || !confirmPassword}
-                    className="w-full inline-flex items-center justify-center rounded-xl bg-[#0f1d33] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#0f1d33] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    disabled={isSubmitting || !policy.isValid || !confirmPassword || newPassword !== confirmPassword}
+                    className="w-full inline-flex items-center justify-center rounded-xl bg-[#0f1d33] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#0f1d33] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Update Password

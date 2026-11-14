@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client';
 import { Lock, Eye, EyeOff, Loader2, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrandLogo } from '@/app/crm/settings/brand-settings/BrandLogo';
+import { PasswordChecklist } from '@/lib/auth/PasswordChecklist';
+import { validatePasswordPolicy } from '@/lib/auth/password-policy';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -40,12 +42,14 @@ export default function ResetPasswordPage() {
     checkSession();
   }, [supabase]);
 
+  const policy = validatePasswordPolicy(password);
+
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
+    if (!policy.isValid) {
+      setErrorMessage('Please ensure your password satisfies all policy requirements (12-20 characters, 1 uppercase, 1 number, 1 special character).');
       return;
     }
 
@@ -139,10 +143,11 @@ export default function ResetPasswordPage() {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
-                      minLength={6}
+                      minLength={12}
+                      maxLength={20}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
+                      placeholder="Enter new password (12-20 characters)"
                       className="w-full rounded-xl border border-[#d8e0ea] bg-[#fbfcfd] pl-10 pr-11 py-2.5 text-sm text-[#0f1d33] placeholder-[#94a3b8] focus:border-[#0f1d33] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#0f1d33] transition-all"
                     />
                     <button
@@ -153,6 +158,8 @@ export default function ResetPasswordPage() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  {/* Live Password Requirements Checklist */}
+                  <PasswordChecklist password={password} className="mt-2" />
                 </div>
 
                 {/* Confirm Password */}
@@ -186,7 +193,7 @@ export default function ResetPasswordPage() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !policy.isValid || !confirmPassword || password !== confirmPassword}
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#0f1d33] py-2.5 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#1a2b47] focus:outline-none focus:ring-2 focus:ring-[#0f1d33] focus:ring-offset-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isLoading ? (

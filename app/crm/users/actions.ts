@@ -2,6 +2,7 @@
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendUserCredentials, sendPasswordResetLink } from '@/lib/resend'
+import { validatePasswordPolicy } from '@/lib/auth/password-policy'
 
 function getAdminClient() {
   return createServiceClient()
@@ -126,6 +127,11 @@ export async function changeAdminPassword(formData: FormData) {
   const id = formData.get('id') as string
   const password = formData.get('password') as string
   if (!id || !password) return { error: 'ID and new password are required' }
+
+  const policy = validatePasswordPolicy(password)
+  if (!policy.isValid) {
+    return { error: 'Password does not meet required policy (12-20 characters, 1 uppercase, 1 number, 1 special character).' }
+  }
 
   const supabaseAdmin = getAdminClient()
   const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password })

@@ -50,7 +50,7 @@ export function Sidebar({
       exact: true,
     },
     {
-      title: 'Leads Pipeline',
+      title: 'Leads',
       href: '/crm/leads',
       icon: Users2,
     },

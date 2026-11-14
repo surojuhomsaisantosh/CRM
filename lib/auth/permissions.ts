@@ -38,6 +38,18 @@ export async function getEffectivePermissions(targetUserId?: string): Promise<Re
       userRole = user.user_metadata?.role || user.app_metadata?.role || 'Admin';
     }
 
+    // Always fetch latest role from database profiles table if available
+    if (userId) {
+      const { data: profile } = await serviceClient
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+      if (profile?.role) {
+        userRole = profile.role;
+      }
+    }
+
     // Default: Super Admin and Admin have edit access to everything
     const permissions: Record<string, AccessLevel> = {};
     const isAdmin = userRole === 'Super Admin' || userRole === 'Admin';

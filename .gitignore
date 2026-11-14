@@ -426,3 +426,34 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Local backups
+backup/
+A_Backup/
+(CRM_SOFTWARE)/
+
+# Environment secrets
+.env*.local
+.env
+
+# Next.js build & node_modules
+.next/
+node_modules/
+*.tsbuildinfo
+
+# Changelog folder (local tracking)
+changelog/
+change_log/
+A_Changelog/
+
+# Requirements & specifications
+requirement/
+A_Requirements/
+
+# Credentials & secrets
+A_Credential/
+credentials/
+
+# Future scope & planning
+A_Scope/
+scope/

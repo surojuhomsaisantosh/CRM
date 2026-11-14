@@ -1,0 +1,456 @@
+'use server'
+
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/server'
+import { canonicalPhoneNumber } from '@/lib/phone-input'
+import { revalidatePath } from 'next/cache'
+
+export async function getLeads(
+  page: number = 1, 
+  limit: number = 50,
+  filters?: {
+    searchQuery?: string,
+    project?: string,
+    sources?: string[],
+    status?: string,
+    statuses?: string[],
+    startDate?: string,
+    endDate?: string,
+    sortField?: string,
+    sortOrder?: 'asc' | 'desc'
+  }
+) {
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  if (!isSupabaseConfigured()) {
+    return { data: [], count: 0 };
+  }
+
+  const supabase = await createClient()
+
+  let query = supabase
+    .from('leads')
+    .select('*', { count: 'exact' })
+
+  // Apply Search (Sanitized against PostgREST expression delimiters ,()" to prevent HTTP 400 crashes)
+  if (filters?.searchQuery) {
+    const cleanSearch = filters.searchQuery.replace(/[,()"]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (cleanSearch) {
+      const q = `%${cleanSearch}%`;
+      query = query.or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q},project.ilike.${q}`);
+    }
+  }
+
+  // Apply Project
+  if (filters?.project && filters.project !== 'all') {
+    query = query.eq('project', filters.project);
+  }
+
+  // Apply Status
+  if (filters?.status && filters.status !== 'all') {
+    query = query.eq('status', filters.status.toLowerCase());
+  } else if (filters?.statuses && filters.statuses.length > 0) {
+    query = query.in('status', filters.statuses);
+  }
+
+  // Apply Sources
+  if (filters?.sources && filters.sources.length > 0) {
+    // If 'meta' is selected, it should match meta, facebook, instagram
+    let sourceFilters: string[] = [];
+    filters.sources.forEach(src => {
+      if (src === 'meta') {
+        sourceFilters.push('meta', 'facebook', 'instagram');
+      } else {
+        sourceFilters.push(src);
+      }
+    });
+    // Build an OR condition for source_page using ilike
+    const sourceOrQuery = sourceFilters.map(src => `source_page.ilike.%${src}%`).join(',');
+    query = query.or(sourceOrQuery);
+  }
+
+  // Apply Dates (Anchored explicitly to Indian Standard Time Asia/Kolkata +05:30)
+  // Prevents UTC day-shift bugs on production Vercel servers where selecting e.g. 24th pulled in 25th early morning leads
+  if (filters?.startDate) {
+    const dateOnly = filters.startDate.split('T')[0].trim();
+    if (dateOnly) {
+      const startIst = new Date(`${dateOnly}T00:00:00+05:30`);
+      query = query.gte('created_at', startIst.toISOString());
+    }
+  }
+  if (filters?.endDate) {
+    const dateOnly = filters.endDate.split('T')[0].trim();
+    if (dateOnly) {
+      const endIst = new Date(`${dateOnly}T23:59:59.999+05:30`);
+      query = query.lte('created_at', endIst.toISOString());
+    }
+  }
+
+  // Apply Sorting
+  const sortField = filters?.sortField || 'created_at';
+  const ascending = filters?.sortOrder === 'asc';
+  query = query.order(sortField, { ascending });
+
+  // Apply Pagination
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('Error fetching leads:', error)
+    return { data: [], count: 0 }
+  }
+
+  return { data, count: count || 0 }
+}
+
+export async function createLead(formData: FormData) {
+  const supabase = await createClient()
+  
+  const name = formData.get('name') as string
+  const email = formData.get('email') as string
+  const phone = formData.get('phone') as string
+  const message = formData.get('message') as string
+  const property_interest = formData.get('property_interest') as string
+  const source_page = formData.get('source_page') as string
+  const status = formData.get('status') as string
+  const location = formData.get('location') as string
+  const project = formData.get('project') as string
+  const enquiry_type = formData.get('enquiry_type') as string
+  const downloaded_item = formData.get('downloaded_item') as string
+  const form_id = formData.get('form_id') as string
+
+  // If lead originates from a registered Meta form, verify the form is active
+  if (form_id) {
+    const { data: formCheck } = await supabase
+      .from('meta_forms')
+      .select('is_active, project_name')
+      .eq('form_id', form_id)
+      .maybeSingle()
+
+    if (formCheck && formCheck.is_active === false) {
+      return { error: 'Incoming leads for this form are currently paused and inactive.' }
+    }
+  }
+
+  if (!name || !email) {
+    return { error: 'Name and Email are required' }
+  }
+
+  const { data, error } = await supabase
+    .from('leads')
+    .insert([{
+      name,
+      email,
+      phone: phone || null,
+      message: message || '',
+      property_interest: property_interest || null,
+      source_page: source_page || 'contact',
+      status: status || 'new',
+      location: location || null,
+      project: project || null,
+      enquiry_type: enquiry_type || null,
+      downloaded_item: downloaded_item || null
+    }])
+    .select()
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/crm/leads')
+  return { success: true, data }
+}
+
+export async function updateLead(id: string, formData: FormData) {
+  const supabase = await createClient()
+  
+  const name = formData.get('name') as string
+  const email = formData.get('email') as string
+  const phone = formData.get('phone') as string
+  const message = formData.get('message') as string
+  const property_interest = formData.get('property_interest') as string
+  const source_page = formData.get('source_page') as string
+  const status = formData.get('status') as string
+  const location = formData.get('location') as string
+  const project = formData.get('project') as string
+  const enquiry_type = formData.get('enquiry_type') as string
+  const downloaded_item = formData.get('downloaded_item') as string
+  const form_id = formData.get('form_id') as string
+
+  // If lead originates from a registered Meta form, verify the form is active
+  if (form_id) {
+    const { data: formCheck } = await supabase
+      .from('meta_forms')
+      .select('is_active, project_name')
+      .eq('form_id', form_id)
+      .maybeSingle()
+
+    if (formCheck && formCheck.is_active === false) {
+      return { error: 'Incoming leads for this form are currently paused and inactive.' }
+    }
+  }
+
+  if (!name || !email) {
+    return { error: 'Name and Email are required' }
+  }
+
+  const { data, error } = await supabase
+    .from('leads')
+    .update({
+      name,
+      email,
+      phone: phone || null,
+      message: message || '',
+      property_interest: property_interest || null,
+      source_page: source_page || 'contact',
+      status: status || 'new',
+      location: location || null,
+      project: project || null,
+      enquiry_type: enquiry_type || null,
+      downloaded_item: downloaded_item || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/crm/leads')
+  return { success: true, data }
+}
+
+export async function deleteLead(id: string) {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  if (!isUuid) {
+    return { error: 'Invalid lead ID format.' }
+  }
+
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/crm/leads')
+  return { success: true }
+}
+
+export async function deleteMultipleLeads(ids: string[]) {
+  if (!ids || ids.length === 0) return { success: true }
+
+  const validIds = ids.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+  if (validIds.length === 0) return { success: true }
+
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .in('id', validIds)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/crm/leads')
+  return { success: true }
+}
+
+export async function updateLeadStatus(id: string, status: string): Promise<{
+  success: boolean
+  error?: string
+  syncedCount?: number
+  phone?: string | null
+  name?: string | null
+}> {
+  const supabase = await createClient()
+
+  // 1. Fetch lead details to check phone number
+  const { data: currentLead, error: fetchErr } = await supabase
+    .from('leads')
+    .select('id, name, phone, status')
+    .eq('id', id)
+    .single()
+
+  if (fetchErr || !currentLead) {
+    return { success: false, error: fetchErr?.message || 'Lead not found.' }
+  }
+
+  const canonicalPhone = canonicalPhoneNumber(currentLead.phone || '')
+  let syncedCount = 1
+
+  // 2. Read a bounded candidate set, allowing historical spaces and punctuation.
+  // Only full canonical equality authorizes writes; a suffix is never an identity.
+  if (canonicalPhone) {
+    const candidateLimit = 500
+    const candidatePattern = `%${canonicalPhone.replace(/\D/g, '').slice(-10).split('').join('%')}%`
+    const { data: candidates, error: candidateError } = await supabase
+      .from('leads')
+      .select('id, phone')
+      .ilike('phone', candidatePattern)
+      .limit(candidateLimit + 1)
+
+    if (candidateError) return { success: false, error: candidateError.message }
+    if ((candidates?.length || 0) > candidateLimit) {
+      return { success: false, error: 'Too many phone matches to synchronize safely. Please contact an administrator.' }
+    }
+
+    const matchingIds = [...new Set([
+      id,
+      ...(candidates || [])
+        .filter(lead => canonicalPhoneNumber(lead.phone || '') === canonicalPhone)
+        .map(lead => lead.id),
+    ])]
+    const { data: updatedRows, error: batchError } = await supabase
+      .from('leads')
+      .update({ status, updated_at: new Date().toISOString() })
+      .in('id', matchingIds)
+      .select('id')
+
+    if (!batchError && updatedRows && updatedRows.length > 0) {
+      syncedCount = updatedRows.length
+    } else {
+      // Fallback single update
+      const { error: singleErr } = await supabase
+        .from('leads')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (singleErr) return { success: false, error: singleErr.message }
+    }
+  } else {
+    // Keep unrecognized or absent phone numbers scoped to the selected lead.
+    const { error: singleErr } = await supabase
+      .from('leads')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    if (singleErr) {
+      return { success: false, error: singleErr.message }
+    }
+  }
+
+  revalidatePath('/crm/leads')
+  return {
+    success: true,
+    syncedCount,
+    phone: currentLead.phone,
+    name: currentLead.name
+  }
+}
+
+export async function getLeadActivities(leadId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('lead_activities')
+    .select('*')
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching lead activities:', error)
+    return { data: [], error: 'Failed to fetch activities' }
+  }
+
+  return { data, error: null }
+}
+
+// Meta Forms Server Actions
+export async function getProjectsList() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, name, client_name')
+    .order('name', { ascending: true })
+
+  if (error) {
+    return { data: [], error: error.message }
+  }
+  return { data: data || [], error: null }
+}
+
+export async function getMetaForms() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('meta_forms')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching meta forms:', error)
+    return { data: [], error: error.message }
+  }
+
+  return { data, error: null }
+}
+
+export async function addMetaForm(
+  form_id: string,
+  name: string = '',
+  project_id: string = '',
+  project_name: string = ''
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('meta_forms')
+    .insert([{
+      form_id,
+      name,
+      project_id: project_id || null,
+      project_name: project_name || '',
+      is_active: true
+    }])
+    .select()
+
+  if (error) {
+    return { error: error.message }
+  }
+  return { success: true, data }
+}
+
+export async function toggleMetaFormStatus(id: string, is_active: boolean) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('meta_forms')
+    .update({ is_active })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+  return { success: true }
+}
+
+export async function deleteMetaForm(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('meta_forms')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+  return { success: true }
+}
+
+export async function updateMetaFormName(id: string, name: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('meta_forms')
+    .update({ name })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+  return { success: true }
+}

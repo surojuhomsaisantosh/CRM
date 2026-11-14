@@ -51,21 +51,23 @@ export async function getProjectsWithFormCounts(): Promise<{ data: ProjectRecord
   try {
     const supabase = await createClient()
 
-    // 1. Fetch projects
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false })
+    // Fetch projects, forms, integrations, and pending tokens concurrently with Promise.all
+    const [
+      { data: projects, error: projectsError },
+      { data: forms, error: formsError },
+      { data: integrations },
+      { data: pendingTokens }
+    ] = await Promise.all([
+      supabase.from('projects').select('*').order('created_at', { ascending: false }),
+      supabase.from('meta_forms').select('id, project_id, is_active'),
+      supabase.from('project_integrations').select('id, project_id, provider, page_id, page_name, is_connected, webhook_subscribed, last_synced_at'),
+      supabase.from('client_connect_tokens').select('project_id').is('used_at', null).gt('expires_at', new Date().toISOString())
+    ])
 
     if (projectsError) {
       console.warn('Projects table read notice:', projectsError.message)
       return { data: [], error: null }
     }
-
-    // 2. Fetch forms to compute active / inactive form counts per project
-    const { data: forms, error: formsError } = await supabase
-      .from('meta_forms')
-      .select('id, project_id, is_active')
 
     const formsMap = new Map<string, { active: number, inactive: number }>()
 
@@ -82,24 +84,12 @@ export async function getProjectsWithFormCounts(): Promise<{ data: ProjectRecord
       })
     }
 
-    // 3. Fetch Meta integrations
-    const { data: integrations } = await supabase
-      .from('project_integrations')
-      .select('id, project_id, provider, page_id, page_name, is_connected, webhook_subscribed, last_synced_at')
-
     const integrationsMap = new Map<string, ProjectMetaIntegration>()
     if (integrations) {
       integrations.forEach((item: any) => {
         integrationsMap.set(item.project_id, item)
       })
     }
-
-    // 4. Fetch pending connect tokens
-    const { data: pendingTokens } = await supabase
-      .from('client_connect_tokens')
-      .select('project_id')
-      .is('used_at', null)
-      .gt('expires_at', new Date().toISOString())
 
     const pendingSet = new Set((pendingTokens || []).map((t: any) => t.project_id))
 

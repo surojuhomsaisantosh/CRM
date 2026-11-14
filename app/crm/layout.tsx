@@ -13,9 +13,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
   const [userRole, setUserRole] = useState<string>('Admin')
   const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
+
+  useEffect(() => {
+    setIsNavigating(false)
+  }, [pathname])
 
   useEffect(() => {
     if (isLoginPage) return
@@ -67,14 +72,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           isCollapsed={isCollapsed} 
           toggleCollapse={() => setIsCollapsed(!isCollapsed)} 
           onNavigate={() => setIsMobileMenuOpen(false)}
+          onNavigationStart={() => setIsNavigating(true)}
           userRole={userRole}
           userName={userName}
           userEmail={userEmail}
         />
       </div>
       
+      {/* Top Navigation Loading Indicator */}
+      {isNavigating && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gradient-to-r from-[#0f1d33] via-[#c4a55a] to-[#0f1d33] animate-pulse shadow-sm" />
+      )}
+
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pt-20 md:pt-8 w-full flex flex-col min-h-0">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pt-20 md:pt-8 w-full flex flex-col min-h-0 relative">
         <div className="mx-auto max-w-7xl w-full flex-1 flex flex-col min-h-0">
           {children}
         </div>

@@ -6,12 +6,23 @@ import { requireAccess } from '@/lib/auth/permissions'
 
 export default async function LeadsPage() {
   await requireAccess('leads')
-  const { data: initialLeads, count: totalCount } = await getLeads(1, 50)
-  const { data: leadStatuses } = await getLeadStatuses()
-  
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const userRole = user?.user_metadata?.role || 'Admin'
+
+  // Run independent database queries in parallel with Promise.all to minimize latency
+  const [
+    leadsRes,
+    statusesRes,
+    userRes
+  ] = await Promise.all([
+    getLeads(1, 50),
+    getLeadStatuses(),
+    supabase.auth.getUser()
+  ])
+
+  const initialLeads = leadsRes.data || []
+  const totalCount = leadsRes.count || 0
+  const leadStatuses = statusesRes.data || []
+  const userRole = userRes.data.user?.user_metadata?.role || 'Admin'
 
   return (
     <div className="w-full">
@@ -19,7 +30,7 @@ export default async function LeadsPage() {
         initialLeads={initialLeads} 
         totalCount={totalCount} 
         userRole={userRole} 
-        initialStatuses={leadStatuses || []}
+        initialStatuses={leadStatuses}
       />
     </div>
   )

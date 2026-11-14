@@ -1,28 +1,25 @@
 import { getLeads } from './actions'
 import { getLeadStatuses } from '../modules/actions'
 import LeadsClient from './LeadsClient'
-import { createClient } from '@/lib/supabase/server'
 import { requireAccess } from '@/lib/auth/permissions'
 
+export const dynamic = 'force-dynamic'
+
 export default async function LeadsPage() {
-  await requireAccess('leads')
-  const supabase = await createClient()
+  const { role: userRole } = await requireAccess('leads')
 
   // Run independent database queries in parallel with Promise.all to minimize latency
   const [
     leadsRes,
-    statusesRes,
-    userRes
+    statusesRes
   ] = await Promise.all([
     getLeads(1, 50),
-    getLeadStatuses(),
-    supabase.auth.getUser()
+    getLeadStatuses()
   ])
 
   const initialLeads = leadsRes.data || []
   const totalCount = leadsRes.count || 0
   const leadStatuses = statusesRes.data || []
-  const userRole = userRes.data.user?.user_metadata?.role || 'Admin'
 
   return (
     <div className="w-full">

@@ -338,11 +338,11 @@ export default function BrandingSettings() {
             Choose Your Color Palette
           </h3>
           <p className="text-xs text-[#5a6a80] mt-0.5">
-            Select a color using the interactive RGB circle with your mouse, or search any color name, hex code, or RGB value.
+            Select a color using the interactive RGB circle with your mouse, or enter your color code below.
           </p>
         </div>
 
-        {/* Color Search Bar (No Quick Picks) */}
+        {/* Color Code Input Bar */}
         <div>
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <Search className="absolute left-3.5 text-[#8c9ba5]" size={16} />
@@ -358,7 +358,7 @@ export default function BrandingSettings() {
                   applyColor(match.hex);
                 }
               }}
-              placeholder="Search color name (e.g. gold, sapphire, emerald, ruby, violet, cyan) or Hex/RGB..."
+              placeholder="Enter your color code here (e.g. #C4A55A, gold, rgb(196, 165, 90))..."
               className="w-full pl-10 pr-24 py-2 text-sm bg-[#f8fafc] border border-[#d5dce6] rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1d33] transition-all"
             />
             <button
@@ -366,7 +366,7 @@ export default function BrandingSettings() {
               className="absolute right-2 px-3 py-1 text-xs font-semibold text-white rounded-lg shadow-sm"
               style={{ backgroundColor: currentHex }}
             >
-              Search
+              Apply
             </button>
           </form>
         </div>
@@ -404,8 +404,8 @@ export default function BrandingSettings() {
                 }}
               />
             </div>
-            <p className="text-[11px] text-[#5a6a80] mt-3">
-              Click or drag inside the circle to choose any hue & saturation.
+            <p className="text-[11px] text-[#5a6a80] mt-3 whitespace-nowrap text-center">
+              Click or drag inside the circle to choose any color.
             </p>
           </div>
 
@@ -436,8 +436,8 @@ export default function BrandingSettings() {
             </div>
 
             {/* Active Color Preview & Code Display */}
-            <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 space-y-3">
-              <div className="flex items-center gap-3">
+            <div className="bg-white rounded-xl border border-[#e2e8f0] p-4">
+              <div className="flex items-center gap-3.5">
                 <div
                   className="w-12 h-12 rounded-xl shadow-inner border border-black/10 shrink-0"
                   style={{ backgroundColor: currentHex }}
@@ -446,20 +446,9 @@ export default function BrandingSettings() {
                   <div className="text-xs text-[#5a6a80] uppercase font-bold tracking-wider">
                     Selected Accent Color
                   </div>
-                  <div className="text-lg font-mono font-extrabold text-[#0f1d33] uppercase">
+                  <div className="text-xl font-mono font-extrabold text-[#0f1d33] uppercase">
                     {currentHex}
                   </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div className="bg-[#f8fafc] px-2.5 py-1.5 rounded-lg border border-[#e2e8f0] text-[#5a6a80]">
-                  <span className="text-[#8c9ba5] block text-[10px] uppercase font-sans">Hue / Sat / Light</span>
-                  {hsl.h}° / {hsl.s}% / {hsl.l}%
-                </div>
-                <div className="bg-[#f8fafc] px-2.5 py-1.5 rounded-lg border border-[#e2e8f0] text-[#5a6a80]">
-                  <span className="text-[#8c9ba5] block text-[10px] uppercase font-sans">CSS Variable</span>
-                  var(--crm-accent)
                 </div>
               </div>
             </div>

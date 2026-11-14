@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { listAdminUsers, addAdminUser, deleteAdminUser, changeAdminPassword, toggleAdminStatus, editAdminUser, getRoles, addRole, deleteRole, deleteAndReassignRole, sendPasswordResetEmail } from './actions'
-import { Users, Loader2, Plus, Search, X, Eye, EyeOff, Shield, Trash2, Key, UserX, UserCheck, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
+import { Users, Loader2, Plus, Search, X, Eye, EyeOff, Shield, Trash2, Key, UserX, UserCheck, ChevronLeft, ChevronRight, Pencil, CheckCircle2, Copy } from 'lucide-react'
 import { PasswordChecklist } from '@/lib/auth/PasswordChecklist'
 import { validatePasswordPolicy } from '@/lib/auth/password-policy'
+import { toast } from 'sonner'
 
 type AdminUser = {
   id: string
@@ -61,6 +62,8 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [isSendingReset, setIsSendingReset] = useState(false)
   const [passwordError, setPasswordError] = useState('')
+  const [generatedResetLink, setGeneratedResetLink] = useState<string | null>(null)
+  const [resetSuccessMessage, setResetSuccessMessage] = useState('')
   
   // Action State
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
@@ -266,6 +269,10 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
     setIsPasswordModalOpen(false)
     setSelectedUserId(null)
     setNewPasswordVal('')
+    setShowPassword(false)
+    setPasswordError('')
+    setGeneratedResetLink(null)
+    setResetSuccessMessage('')
   }
 
   const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -284,12 +291,14 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
       const result = await changeAdminPassword(formData)
       if (result.error) {
         setPasswordError(result.error)
+        toast.error(result.error)
       } else {
-        alert('Password changed successfully')
+        toast.success('Password updated successfully!')
         closePasswordModal()
       }
     } catch (err) {
       setPasswordError('An unexpected error occurred.')
+      toast.error('An unexpected error occurred.')
     } finally {
       isChangingPasswordRef.current = false
       setIsChangingPassword(false)
@@ -309,17 +318,24 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
     isSendingResetRef.current = true
     setIsSendingReset(true)
     setPasswordError('')
+    setResetSuccessMessage('')
 
     try {
       const res = await sendPasswordResetEmail(userToReset.email)
       if (res.error) {
         setPasswordError(res.error)
+        toast.error(res.error)
       } else {
-        closePasswordModal()
-        alert('Password reset email sent successfully!')
+        const msg = `Password reset request dispatched for ${userToReset.email}`
+        setResetSuccessMessage(msg)
+        toast.success(msg)
+        if (res.resetLink) {
+          setGeneratedResetLink(res.resetLink)
+        }
       }
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to send reset email')
+      toast.error(err.message || 'Failed to send reset email')
     } finally {
       isSendingResetRef.current = false
       setIsSendingReset(false)
@@ -982,18 +998,49 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                     type="button"
                     onClick={handleSendResetEmail}
                     disabled={isSendingReset}
-                    className="w-full inline-flex items-center justify-center rounded-lg border border-[#c4a55a] px-4 py-2 text-sm font-medium text-[#c4a55a] hover:bg-[#c4a55a]/10 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                    className="w-full inline-flex items-center justify-center rounded-lg border border-[#c4a55a] px-4 py-2 text-sm font-medium text-[#c4a55a] hover:bg-[#c4a55a]/10 transition-colors disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
                   >
                     {isSendingReset ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
+                        Sending reset email...
                       </>
                     ) : (
                       'Send Password Reset Email Instead'
                     )}
                   </button>
                 </div>
+
+                {generatedResetLink && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2.5 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{resetSuccessMessage || 'Password reset link generated!'}</span>
+                    </div>
+                    <p className="text-[11px] text-[#5a6a82] leading-relaxed">
+                      An email was dispatched via Supabase Auth. You can also copy the direct 1-click link below:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedResetLink}
+                        className="flex-1 bg-white border border-[#d8e0ea] rounded-lg px-2.5 py-1.5 text-[11px] text-[#0f1d33] font-mono select-all truncate"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedResetLink)
+                          toast.success('Reset link copied to clipboard!')
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-[#0f1d33] hover:bg-[#1e3a5f] rounded-lg transition-colors cursor-pointer shrink-0"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-8 flex justify-end space-x-3 pt-4">
                   <button

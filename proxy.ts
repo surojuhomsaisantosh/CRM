@@ -50,10 +50,12 @@ export async function proxy(request: NextRequest) {
   const isAuthenticated = Boolean(user || isDemoSession);
 
   const isLoginPage = request.nextUrl.pathname === '/crm/login';
+  const isResetPasswordPage = request.nextUrl.pathname === '/crm/reset-password';
+  const isPublicAuthPage = isLoginPage || isResetPasswordPage || request.nextUrl.pathname === '/crm/forgot-password';
   const isCrmRoute = request.nextUrl.pathname.startsWith('/crm');
 
   // If user is not logged in and visiting protected CRM route
-  if (!isAuthenticated && isCrmRoute && !isLoginPage) {
+  if (!isAuthenticated && isCrmRoute && !isPublicAuthPage) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/crm/login';
     return NextResponse.redirect(redirectUrl);

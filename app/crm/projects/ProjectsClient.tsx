@@ -681,12 +681,9 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
             {/* Header */}
             <div className="flex items-start justify-between pb-4 border-b border-[#e8ecf2]">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                  <h3 className="text-lg font-bold text-[#0f1d33]">
-                    {diagnosticsProject.name} &bull; Meta Diagnostics
-                  </h3>
-                </div>
+                <h3 className="text-lg font-bold text-[#0f1d33]">
+                  {diagnosticsProject.name} &bull; Meta Diagnostics
+                </h3>
                 <p className="text-xs text-[#5a6a82]">
                   Live health monitoring, automated webhook status, and form lead backfilling.
                 </p>

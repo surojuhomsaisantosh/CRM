@@ -521,14 +521,9 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                         {startIndex + index + 1}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-[#e8ecf2] flex items-center justify-center flex-shrink-0">
-                            <Shield className="h-4 w-4 text-[#1e3a5f]" />
-                          </div>
-                          <div>
-                            {user.name && <div className="font-medium text-[#0f1d33]">{user.name}</div>}
-                            <div className={`${user.name ? 'text-xs text-[#5a6a82]' : 'font-medium text-[#1e3a5f]'}`}>{user.email}</div>
-                          </div>
+                        <div>
+                          {user.name && <div className="font-medium text-[#0f1d33]">{user.name}</div>}
+                          <div className={`${user.name ? 'text-xs text-[#5a6a82]' : 'font-medium text-[#1e3a5f]'}`}>{user.email}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -639,10 +634,7 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
               ) : (
                 paginatedUsers.map((user, index) => (
                   <div key={`mobile-${user.id}`} className="p-4 flex flex-col gap-3 hover:bg-[#f3f5f8] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[#e8ecf2] flex items-center justify-center flex-shrink-0">
-                        <Shield className="h-5 w-5 text-[#1e3a5f]" />
-                      </div>
+                    <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         {user.name && <div className="font-semibold text-[#0f1d33] text-base truncate">{user.name}</div>}
                         <div className={`truncate ${user.name ? 'text-sm text-[#5a6a82]' : 'font-semibold text-[#1e3a5f] text-base'}`}>{user.email}</div>
@@ -654,7 +646,7 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-sm ml-[3.25rem]">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs text-[#5a6a82]">Status</span>
                         {user.is_disabled ? (

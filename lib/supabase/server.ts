@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
  * Server client honoring the current user's authenticated session via cookies.
  */
 export async function createClient() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || 'https://placeholder.supabase.co';
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || 'dummy-anon-key-placeholder';
 

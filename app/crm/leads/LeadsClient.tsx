@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Edit2, Trash2, X, Search, Globe, FilterX, Download, MessageCircle, Megaphone, Settings, ArrowUp, ArrowDown, ArrowUpDown, Check, RefreshCw, AlertTriangle, Loader2, FolderKanban, FileCheck2, FileX2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Search, Globe, FilterX, Download, MessageCircle, Megaphone, Settings, ArrowUp, ArrowDown, ArrowUpDown, Check, RefreshCw, AlertTriangle, Loader2, FolderKanban, FileCheck2, FileX2, ChevronDown } from 'lucide-react'
 
 
 import { createClient } from '@/lib/supabase/client'
@@ -1250,28 +1250,31 @@ export default function LeadsClient({
                       </div>
                     </td>
                     <td className="px-3 py-2">
-                      <select
-                        value={lead.status || 'new'}
-                        onChange={(e) => handleStatusChange(lead.id, e.target.value)}
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize appearance-none cursor-pointer border focus:ring-0 hover:opacity-80 transition-opacity ${getStatusBadgeStyle(lead.status)}`}
-                      >
-                        {statuses.length > 0 ? (
-                          statuses.map(s => (
-                            <option key={s.id || s.key} value={s.key} className="bg-white text-[#0f1d33]">
-                              {s.name}
-                            </option>
-                          ))
-                        ) : (
-                          <>
-                            <option value="new" className="bg-white text-[#0f1d33]">New</option>
-                            <option value="contacted" className="bg-white text-[#0f1d33]">Contacted</option>
-                            <option value="uncontacted" className="bg-white text-[#0f1d33]">Uncontacted</option>
-                            <option value="qualified" className="bg-white text-[#0f1d33]">Qualified</option>
-                            <option value="rejected" className="bg-white text-[#0f1d33]">Rejected</option>
-                            <option value="closed" className="bg-white text-[#0f1d33]">Closed</option>
-                          </>
-                        )}
-                      </select>
+                      <div className="relative inline-flex items-center">
+                        <select
+                          value={lead.status || 'new'}
+                          onChange={(e) => handleStatusChange(lead.id, e.target.value)}
+                          className={`inline-flex items-center rounded-full pl-2.5 pr-6 py-1 text-xs font-semibold capitalize appearance-none cursor-pointer border focus:ring-0 hover:opacity-85 transition-opacity ${getStatusBadgeStyle(lead.status)}`}
+                        >
+                          {statuses.length > 0 ? (
+                            statuses.map(s => (
+                              <option key={s.id || s.key} value={s.key} className="bg-white text-[#0f1d33]">
+                                {s.name}
+                              </option>
+                            ))
+                          ) : (
+                            <>
+                              <option value="new" className="bg-white text-[#0f1d33]">New</option>
+                              <option value="contacted" className="bg-white text-[#0f1d33]">Contacted</option>
+                              <option value="uncontacted" className="bg-white text-[#0f1d33]">Uncontacted</option>
+                              <option value="qualified" className="bg-white text-[#0f1d33]">Qualified</option>
+                              <option value="rejected" className="bg-white text-[#0f1d33]">Rejected</option>
+                              <option value="closed" className="bg-white text-[#0f1d33]">Closed</option>
+                            </>
+                          )}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-60" />
+                      </div>
                     </td>
                     {userRole === 'Super Admin' && (
                       <td className="px-3 py-2 text-right">
@@ -1365,28 +1368,31 @@ export default function LeadsClient({
                 </div>
 
                 <div className="flex items-center justify-between ml-7 mt-2 pt-3 border-t border-[#e8ecf2]">
-                  <select
-                    value={lead.status || 'new'}
-                    onChange={(e) => handleStatusChange(lead.id, e.target.value)}
-                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize appearance-none cursor-pointer border focus:ring-0 hover:opacity-80 transition-opacity ${getStatusBadgeStyle(lead.status)}`}
-                  >
-                    {statuses.length > 0 ? (
-                      statuses.map(s => (
-                        <option key={s.id || s.key} value={s.key} className="bg-white text-[#0f1d33]">
-                          {s.name}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="new" className="bg-white text-[#0f1d33]">New</option>
-                        <option value="contacted" className="bg-white text-[#0f1d33]">Contacted</option>
-                        <option value="uncontacted" className="bg-white text-[#0f1d33]">Uncontacted</option>
-                        <option value="qualified" className="bg-white text-[#0f1d33]">Qualified</option>
-                        <option value="rejected" className="bg-white text-[#0f1d33]">Rejected</option>
-                        <option value="closed" className="bg-white text-[#0f1d33]">Closed</option>
-                      </>
-                    )}
-                  </select>
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={lead.status || 'new'}
+                      onChange={(e) => handleStatusChange(lead.id, e.target.value)}
+                      className={`inline-flex items-center rounded-full pl-2.5 pr-6 py-1 text-xs font-semibold capitalize appearance-none cursor-pointer border focus:ring-0 hover:opacity-85 transition-opacity ${getStatusBadgeStyle(lead.status)}`}
+                    >
+                      {statuses.length > 0 ? (
+                        statuses.map(s => (
+                          <option key={s.id || s.key} value={s.key} className="bg-white text-[#0f1d33]">
+                            {s.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="new" className="bg-white text-[#0f1d33]">New</option>
+                          <option value="contacted" className="bg-white text-[#0f1d33]">Contacted</option>
+                          <option value="uncontacted" className="bg-white text-[#0f1d33]">Uncontacted</option>
+                          <option value="qualified" className="bg-white text-[#0f1d33]">Qualified</option>
+                          <option value="rejected" className="bg-white text-[#0f1d33]">Rejected</option>
+                          <option value="closed" className="bg-white text-[#0f1d33]">Closed</option>
+                        </>
+                      )}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-60" />
+                  </div>
 
                   {userRole === 'Super Admin' && (
                     <div className="flex items-center space-x-2">
@@ -1690,29 +1696,32 @@ export default function LeadsClient({
                 </div>
                 <div>
                   <label htmlFor="status" className="block text-sm font-medium text-[#0f1d33] mb-1">Status</label>
-                  <select
-                    name="status"
-                    id="status"
-                    defaultValue={editingLead?.status || 'new'}
-                    className="w-full rounded-lg border border-[#e8ecf2] bg-[#f3f5f8] px-3 py-2.5 text-sm text-[#0f1d33] outline-none focus:border-[#1e3a5f]"
-                  >
-                    {statuses.length > 0 ? (
-                      statuses.map(s => (
-                        <option key={s.id || s.key} value={s.key}>
-                          {s.name}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="new">New</option>
-                        <option value="contacted">Contacted</option>
-                        <option value="uncontacted">Uncontacted</option>
-                        <option value="qualified">Qualified</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="closed">Closed</option>
-                      </>
-                    )}
-                  </select>
+                  <div className="relative">
+                    <select
+                      name="status"
+                      id="status"
+                      defaultValue={editingLead?.status || 'new'}
+                      className="w-full appearance-none rounded-lg border border-[#e8ecf2] bg-[#f3f5f8] pl-3 pr-9 py-2.5 text-sm text-[#0f1d33] outline-none focus:border-[#1e3a5f] cursor-pointer"
+                    >
+                      {statuses.length > 0 ? (
+                        statuses.map(s => (
+                          <option key={s.id || s.key} value={s.key}>
+                            {s.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="new">New</option>
+                          <option value="contacted">Contacted</option>
+                          <option value="uncontacted">Uncontacted</option>
+                          <option value="qualified">Qualified</option>
+                          <option value="rejected">Rejected</option>
+                          <option value="closed">Closed</option>
+                        </>
+                      )}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5a6a82]" />
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="source_page" className="block text-sm font-medium text-[#0f1d33] mb-1">Source</label>
@@ -1987,18 +1996,21 @@ export default function LeadsClient({
                     <label className="block text-xs font-semibold text-[#0f1d33] mb-1">
                       Associated Project
                     </label>
-                    <select
-                      value={newFormProjectId}
-                      onChange={(e) => setNewFormProjectId(e.target.value)}
-                      className="w-full rounded-lg border border-[#e8ecf2] bg-white px-3 py-2 text-xs text-[#0f1d33] outline-none focus:border-[#0f1d33]"
-                    >
-                      <option value="">Select Project (Optional)</option>
-                      {availableProjects.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.client_name})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={newFormProjectId}
+                        onChange={(e) => setNewFormProjectId(e.target.value)}
+                        className="w-full appearance-none rounded-lg border border-[#e8ecf2] bg-white pl-3 pr-8 py-2 text-xs text-[#0f1d33] outline-none focus:border-[#0f1d33] cursor-pointer"
+                      >
+                        <option value="">Select Project (Optional)</option>
+                        {availableProjects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.client_name})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5a6a82]" />
+                    </div>
                   </div>
 
                   <div className="pt-1">

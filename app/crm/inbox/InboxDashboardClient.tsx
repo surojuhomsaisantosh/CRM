@@ -338,18 +338,27 @@ export default function InboxDashboardClient({
 
   const exportToCSV = () => {
     const headers = ['Sr. No', 'Name', 'Phone', 'Email', 'Project', 'Form ID', 'Form Name', 'Message', 'Date'];
+    
+    // Prevent CSV Formula Injection (CWE-1236): prefix leading =, +, -, @, \t, \r with '
+    const sanitizeCsvField = (raw: string | null | undefined): string => {
+      if (!raw) return '""';
+      const str = raw.replace(/"/g, '""').replace(/\n/g, ' ');
+      const safe = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+      return `"${safe}"`;
+    };
+
     const csvContent = [
       headers.join(','),
       ...processedLeads.map((lead, index) => [
         (currentPage - 1) * pageSize + index + 1,
-        `"${(lead.name || '').replace(/"/g, '""')}"`,
-        `"${(lead.phone || '').replace(/"/g, '""')}"`,
-        `"${(lead.email || '').replace(/"/g, '""')}"`,
-        `"${(lead.project || lead.property_interest || '-').replace(/"/g, '""')}"`,
-        `"${(lead.formId || '-').replace(/"/g, '""')}"`,
-        `"${(lead.formName || '-').replace(/"/g, '""')}"`,
-        `"${(lead.messageText || '-').replace(/"/g, '""')}"`,
-        `"${new Date(lead.lastActive).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}"`
+        sanitizeCsvField(lead.name),
+        sanitizeCsvField(lead.phone),
+        sanitizeCsvField(lead.email),
+        sanitizeCsvField(lead.project || lead.property_interest || '-'),
+        sanitizeCsvField(lead.formId || '-'),
+        sanitizeCsvField(lead.formName || '-'),
+        sanitizeCsvField(lead.messageText || '-'),
+        sanitizeCsvField(new Date(lead.lastActive).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }))
       ].join(','))
     ].join('\n');
 

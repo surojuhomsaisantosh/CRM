@@ -142,8 +142,9 @@ export function saveStoredBrandSettings(settings: BrandSettings) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(BRAND_STORAGE_KEY, JSON.stringify(settings));
-    // Also save in cookie for server / initial renders
-    document.cookie = `${BRAND_STORAGE_KEY}=${encodeURIComponent(JSON.stringify(settings))}; path=/; max-age=31536000; SameSite=Lax`;
+    // Save lightweight theme settings in cookie (exclude customLogoUrl to prevent 4KB cookie overflow & HTTP 431)
+    const { customLogoUrl, ...cookieSafeSettings } = settings;
+    document.cookie = `${BRAND_STORAGE_KEY}=${encodeURIComponent(JSON.stringify(cookieSafeSettings))}; path=/; max-age=31536000; SameSite=Lax`;
     applyBrandCSSVariables(settings);
     // Dispatch custom event so all open tabs / components update live
     window.dispatchEvent(new Event('crm-branding-updated'));

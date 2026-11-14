@@ -577,19 +577,28 @@ export default function LeadsClient({
       const headers = ['Date', 'Name', 'Email', 'Phone', 'Source', 'Project', 'Enquiry Type', 'Property Interest', 'Location', 'Status', 'Message'];
       const csvRows = [headers.join(',')];
 
+      // Prevent CSV Formula Injection (CWE-1236): prefix leading =, +, -, @, \t, \r with '
+      const sanitizeCsvField = (raw: string | null | undefined): string => {
+        if (!raw) return '""';
+        const str = raw.replace(/"/g, '""').replace(/\n/g, ' ');
+        const safe = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+        return `"${safe}"`;
+      };
+
       for (const lead of leadsToExport) {
+        const formattedDate = `${new Date(lead.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} ${new Date(lead.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}`;
         const values = [
-          `"${new Date(lead.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} ${new Date(lead.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}"`,
-          `"${(lead.name || '').replace(/"/g, '""')}"`,
-          `"${(lead.email || '').replace(/"/g, '""')}"`,
-          `"${(lead.phone || '').replace(/"/g, '""')}"`,
-          `"${(lead.source_page || 'contact').replace(/"/g, '""')}"`,
-          `"${(lead.project || '').replace(/"/g, '""')}"`,
-          `"${(lead.enquiry_type || '').replace(/"/g, '""')}"`,
-          `"${(lead.property_interest || '').replace(/"/g, '""')}"`,
-          `"${(lead.location || '').replace(/"/g, '""')}"`,
-          `"${(lead.status || 'new').replace(/"/g, '""')}"`,
-          `"${(lead.message || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
+          sanitizeCsvField(formattedDate),
+          sanitizeCsvField(lead.name),
+          sanitizeCsvField(lead.email),
+          sanitizeCsvField(lead.phone),
+          sanitizeCsvField(lead.source_page || 'contact'),
+          sanitizeCsvField(lead.project),
+          sanitizeCsvField(lead.enquiry_type),
+          sanitizeCsvField(lead.property_interest),
+          sanitizeCsvField(lead.location),
+          sanitizeCsvField(lead.status || 'new'),
+          sanitizeCsvField(lead.message)
         ];
         csvRows.push(values.join(','));
       }

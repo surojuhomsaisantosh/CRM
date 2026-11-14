@@ -47,26 +47,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-[100dvh] min-h-[100dvh] w-full bg-[#f7f8fa] overflow-hidden">
       {/* Mobile Top Bar */}
-      <div className="md:hidden flex items-center justify-between bg-white border-b border-[#e8ecf2] h-16 px-4 shrink-0 absolute top-0 w-full z-20">
+      <div className="md:hidden flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-[#e8ecf2] h-16 px-4 shrink-0 fixed top-0 left-0 right-0 z-30 shadow-xs">
         <Link href="/crm" className="flex items-center gap-2 font-black text-lg tracking-wider text-black" onClick={() => setIsMobileMenuOpen(false)}>
           <span>CRM</span>
         </Link>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 -mr-2 text-[#5a6a82] hover:text-[#0f1d33] transition-colors" aria-label="Toggle navigation menu">
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+          className="p-2.5 -mr-1.5 text-[#5a6a82] hover:text-[#0f1d33] active:bg-[#f1f5f9] rounded-xl transition-colors cursor-pointer" 
+          aria-label="Toggle navigation menu"
+        >
           {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-[#0f1d33]/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+        <div className="md:hidden fixed inset-0 z-40 bg-[#0f1d33]/50 backdrop-blur-sm transition-opacity" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
       {/* Sidebar - hidden on mobile by default, absolute and shown when menu is open */}
       <div className={`
-        fixed md:static inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
+        fixed md:static inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         ${isCollapsed ? 'md:w-20' : 'md:w-64'}
-        flex flex-col h-full bg-white md:bg-transparent
+        flex flex-col h-full bg-white md:bg-transparent shadow-xl md:shadow-none
       `}>
         <Sidebar 
           isCollapsed={isCollapsed} 
@@ -85,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 pt-20 md:pt-8 w-full flex flex-col min-h-0 relative">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-8 pt-20 md:pt-8 w-full flex flex-col min-h-0 relative">
         <div className="mx-auto max-w-7xl w-full flex-1 flex flex-col min-h-0">
           {isNavigating ? (
             <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-3">

@@ -110,19 +110,17 @@ export function Sidebar({
     >
       {/* Brand Header */}
       <div
-        className={`flex items-center ${
-          isCollapsed ? 'justify-between px-2.5' : 'justify-between px-4'
-        } h-16 border-b border-[#e8ecf2]`}
+        className="relative flex items-center justify-center h-16 border-b border-[#e8ecf2] px-4"
       >
         <Link
           href="/crm"
           onClick={onNavigate}
-          className="flex items-center shrink-0 transition-opacity hover:opacity-90"
+          className="flex items-center justify-center shrink-0 transition-opacity hover:opacity-90"
         >
           <span
             className={`${
               isCollapsed ? 'text-sm' : 'text-xl'
-            } font-black tracking-tight text-black whitespace-nowrap shrink-0`}
+            } font-black tracking-tight text-black whitespace-nowrap text-center`}
           >
             CRM
           </span>
@@ -131,7 +129,7 @@ export function Sidebar({
         {/* Collapse toggle button for desktop */}
         <button
           onClick={toggleCollapse}
-          className="hidden md:flex items-center justify-center w-6 h-6 rounded-lg text-[#5a6a82] hover:text-[#0f1d33] hover:bg-[#f3f5f8] transition-colors shrink-0"
+          className="absolute right-3 hidden md:flex items-center justify-center w-6 h-6 rounded-lg text-[#5a6a82] hover:text-[#0f1d33] hover:bg-[#f3f5f8] transition-colors shrink-0"
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}

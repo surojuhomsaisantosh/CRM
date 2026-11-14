@@ -185,8 +185,44 @@ export default function BrandingSettings() {
     applyColor(hex);
   };
 
-  // Logo file upload handler
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Helper: Downscale & compress uploaded logo to ensure instant loading & safe localStorage storage
+  const compressLogoImage = (file: File, maxDim = 480): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const format = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          const dataUrl = canvas.toDataURL(format, 0.9);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Logo file upload handler: Auto-compresses and instantly persists
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -195,33 +231,38 @@ export default function BrandingSettings() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Logo file size must be under 2MB');
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Logo file size must be under 5MB');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setSettings((prev) => ({
-        ...prev,
-        customLogoUrl: result,
-      }));
-      setIsSaved(false);
-      toast.success('Company logo uploaded! Click "Save Changes" to apply.');
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedDataUrl = await compressLogoImage(file);
+      const updated = {
+        ...settings,
+        customLogoUrl: compressedDataUrl,
+      };
+      setSettings(updated);
+      saveStoredBrandSettings(updated);
+      setIsSaved(true);
+      toast.success('Company logo uploaded and saved! Updated across CRM and Login page.');
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch {
+      toast.error('Failed to process image');
+    }
   };
 
   const handleRemoveLogo = () => {
     setSettings((prev) => {
       const next = { ...prev };
       delete next.customLogoUrl;
+      saveStoredBrandSettings(next);
       return next;
     });
     if (fileInputRef.current) fileInputRef.current.value = '';
-    setIsSaved(false);
+    setIsSaved(true);
     toast.info('Custom logo removed. Default CRM mark will be used.');
+    setTimeout(() => setIsSaved(false), 3000);
   };
 
   const handleSaveAll = () => {

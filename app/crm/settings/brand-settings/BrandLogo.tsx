@@ -19,7 +19,12 @@ export function BrandLogo({
   size = 'md',
   showContainer = true,
 }: BrandLogoProps) {
-  const [branding, setBranding] = useState<BrandSettings>(DEFAULT_BRAND_SETTINGS);
+  const [branding, setBranding] = useState<BrandSettings>(() => {
+    if (typeof window !== 'undefined') {
+      return getStoredBrandSettings();
+    }
+    return DEFAULT_BRAND_SETTINGS;
+  });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -59,14 +64,21 @@ export function BrandLogo({
         />
       );
     }
+
+    const isLarge = size === 'lg' || size === 'xl';
+
     return (
       <div
-        className={`flex items-center justify-center rounded-2xl bg-white border border-[#e8ecf2] shadow-sm overflow-hidden p-1 shrink-0 ${sizeClasses[size]} ${className}`}
+        className={`flex items-center justify-center rounded-2xl bg-white border border-[#e8ecf2] shadow-sm overflow-hidden shrink-0 transition-transform ${
+          isLarge
+            ? 'h-16 max-w-[240px] px-3.5 py-1.5'
+            : `${sizeClasses[size]} p-1`
+        } ${className}`}
       >
         <img
           src={branding.customLogoUrl}
           alt="CRM Logo"
-          className="object-contain w-full h-full max-h-full"
+          className="object-contain w-auto h-auto max-h-12 max-w-full"
         />
       </div>
     );

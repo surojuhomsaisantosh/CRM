@@ -6,11 +6,14 @@ import { validatePasswordPolicy } from './password-policy';
 
 interface PasswordChecklistProps {
   password: string;
+  confirmPassword?: string;
   className?: string;
 }
 
-export function PasswordChecklist({ password, className = '' }: PasswordChecklistProps) {
+export function PasswordChecklist({ password, confirmPassword, className = '' }: PasswordChecklistProps) {
   const result = validatePasswordPolicy(password);
+
+  const isMatch = Boolean(password && confirmPassword && password === confirmPassword);
 
   const criteria = [
     {
@@ -30,6 +33,13 @@ export function PasswordChecklist({ password, className = '' }: PasswordChecklis
       met: result.hasSpecial,
     },
   ];
+
+  if (confirmPassword !== undefined) {
+    criteria.push({
+      label: 'New & confirm passwords match',
+      met: isMatch,
+    });
+  }
 
   return (
     <div className={`p-3 bg-[#f8fafc] border border-[#e8ecf2] rounded-xl space-y-1.5 ${className}`}>

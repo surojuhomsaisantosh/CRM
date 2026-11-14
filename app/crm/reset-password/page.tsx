@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Lock, Eye, EyeOff, Loader2, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, ArrowRight, CheckCircle2, AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrandLogo } from '@/app/crm/settings/brand-settings/BrandLogo';
 import { PasswordChecklist } from '@/lib/auth/PasswordChecklist';
@@ -159,7 +159,7 @@ export default function ResetPasswordPage() {
                     </button>
                   </div>
                   {/* Live Password Requirements Checklist */}
-                  <PasswordChecklist password={password} className="mt-2" />
+                  <PasswordChecklist password={password} confirmPassword={confirmPassword} className="mt-2" />
                 </div>
 
                 {/* Confirm Password */}
@@ -188,6 +188,28 @@ export default function ResetPasswordPage() {
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  {/* Real-time Password Match Indicator */}
+                  {confirmPassword.length > 0 && (
+                    <div className={`flex items-center gap-1.5 text-xs font-semibold mt-1.5 transition-colors ${
+                      password === confirmPassword ? 'text-emerald-600' : 'text-red-500'
+                    }`}>
+                      {password === confirmPassword ? (
+                        <>
+                          <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                            <Check className="w-2.5 h-2.5 text-emerald-700 stroke-[3]" />
+                          </div>
+                          <span>Passwords match</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                            <AlertCircle className="w-2.5 h-2.5 text-red-600 stroke-[3]" />
+                          </div>
+                          <span>Passwords do not match yet</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit Button */}

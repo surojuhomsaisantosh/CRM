@@ -1,6 +1,6 @@
 import ModulesClient from './ModulesClient'
 import { requireAccess } from '@/lib/auth/permissions'
-import { getReportRecipients, getWaRecipients, getLeadStatuses, getAlertRecipients } from './actions'
+import { getReportRecipients, getWaRecipients, getLeadStatuses } from './actions'
 import { getRoles, listAdminUsers } from '../users/actions'
 
 export const dynamic = 'force-dynamic'
@@ -16,7 +16,6 @@ export default async function ModulesPage() {
   const { data: initialRecipients } = await getReportRecipients()
   const { data: initialWaRecipients } = await getWaRecipients()
   const { data: initialLeadStatuses } = await getLeadStatuses()
-  const { data: initialAlertRecipients } = await getAlertRecipients()
   const roles = await getRoles()
   const users = await listAdminUsers()
 
@@ -24,7 +23,6 @@ export default async function ModulesPage() {
     <ModulesClient 
       initialRecipients={initialRecipients || []} 
       initialWaRecipients={initialWaRecipients || []}
-      initialAlertRecipients={initialAlertRecipients || []}
       roles={roles.data || []}
       users={users.users || []}
       initialLeadStatuses={initialLeadStatuses || []}

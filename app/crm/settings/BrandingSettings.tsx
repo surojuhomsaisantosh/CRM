@@ -280,37 +280,12 @@ export default function BrandingSettings() {
         </div>
       </div>
 
-      {/* SECTION 1: UPLOAD LOGO (COMPACT SINGLE ROW WITH UPLOAD BUTTON & EYE PREVIEW POPUP) */}
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#f8fafc] border border-[#e8ecf2] rounded-xl">
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs"
-              style={{ backgroundColor: currentHex }}
-            >
-              <Upload size={17} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-bold text-[#0f1d33] flex items-center gap-2">
-                <span>Company Logo</span>
-                {settings.customLogoUrl ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Custom Active
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-medium text-[#5a6a80] bg-[#eef2f6] px-2 py-0.5 rounded-full">
-                    Default CRM Mark
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[#5a6a80] truncate">
-                {settings.customLogoUrl
-                  ? 'Custom logo uploaded and applied to login & header.'
-                  : 'No custom logo uploaded. Click Upload to replace default mark.'}
-              </p>
-            </div>
-          </div>
+      {/* SECTION 1: UPLOAD LOGO (SINGLE LINE WITH UPLOAD & PREVIEW BUTTONS) */}
+      <div>
+        <div className="flex items-center justify-between gap-4 p-3.5 bg-[#f8fafc] border border-[#e8ecf2] rounded-xl">
+          <p className="text-xs sm:text-sm text-[#334155] font-medium leading-relaxed">
+            Upload here by clicking on the upload button and see the preview of the upload photo by clicking on the preview button.
+          </p>
 
           <div className="flex items-center gap-2 shrink-0">
             <input
@@ -327,17 +302,18 @@ export default function BrandingSettings() {
               style={{ backgroundColor: currentHex }}
             >
               <Upload size={14} />
-              {settings.customLogoUrl ? 'Replace Logo' : 'Upload Logo'}
+              Upload
             </button>
 
-            {/* Eye Button to open Preview Popup */}
+            {/* Preview Button */}
             <button
               type="button"
               onClick={() => setShowPreviewModal(true)}
-              title="View Logo Preview"
-              className="p-1.5 text-[#0f1d33] hover:text-black bg-white hover:bg-[#edf2f7] border border-[#d5dce6] rounded-lg transition-colors flex items-center justify-center shadow-2xs"
+              title="Preview photo"
+              className="px-3 py-1.5 text-xs font-semibold text-[#0f1d33] hover:text-black bg-white hover:bg-[#edf2f7] border border-[#d5dce6] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
             >
-              <Eye size={16} />
+              <Eye size={14} />
+              Preview
             </button>
 
             {/* Remove Button if custom logo is present */}
@@ -348,7 +324,7 @@ export default function BrandingSettings() {
                 title="Remove Custom Logo"
                 className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors flex items-center justify-center shadow-2xs"
               >
-                <Trash2 size={16} />
+                <Trash2 size={15} />
               </button>
             )}
           </div>
@@ -542,7 +518,7 @@ export default function BrandingSettings() {
                 >
                   <Eye size={15} />
                 </div>
-                <h3 className="text-base font-bold text-[#0f1d33]">Company Logo Preview</h3>
+                <h3 className="text-base font-bold text-[#0f1d33]">Photo Preview</h3>
               </div>
               <button
                 type="button"
@@ -577,7 +553,7 @@ export default function BrandingSettings() {
                       >
                         CRM
                       </div>
-                      <span className="text-xs text-[#5a6a80]">Default CRM Mark</span>
+                      <span className="text-xs text-[#5a6a80]">No custom photo uploaded</span>
                     </div>
                   )}
                 </div>
@@ -606,7 +582,7 @@ export default function BrandingSettings() {
                       >
                         CRM
                       </div>
-                      <span className="text-xs text-slate-400">Default CRM Mark</span>
+                      <span className="text-xs text-slate-400">No custom photo uploaded</span>
                     </div>
                   )}
                 </div>

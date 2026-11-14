@@ -169,7 +169,6 @@ export default function ModulesClient({ initialRecipients, initialWaRecipients, 
     setIsSavingEmailEdit(true)
     const trimmedName = editEmailName.trim() || null
     const trimmedEmail = editEmailAddress.trim().toLowerCase()
-    const isMaster = id === 'master-admin-default' || trimmedEmail === 'bhuwanta9@gmail.com'
 
     try {
       const res = await updateReportRecipient(id, {
@@ -180,21 +179,12 @@ export default function ModulesClient({ initialRecipients, initialWaRecipients, 
 
       if (res.success) {
         toast.success('Recipient updated successfully!')
-        setRecipients(prev => {
-          const hasMaster = prev.some(r => r.email.toLowerCase() === 'bhuwanta9@gmail.com')
-          if (isMaster && !hasMaster) {
-            return [
-              { id: '8afdf3c6-c3c9-4dba-bfac-cc8fc2446e3f', email: 'bhuwanta9@gmail.com', name: trimmedName, created_at: new Date().toISOString(), report_times: editEmailTimings },
-              ...prev
-            ]
-          }
-          return prev.map(r => (r.id === id || (isMaster && r.email.toLowerCase() === 'bhuwanta9@gmail.com')) ? {
-            ...r,
-            name: trimmedName,
-            email: trimmedEmail || r.email,
-            report_times: editEmailTimings
-          } : r)
-        })
+        setRecipients(prev => prev.map(r => r.id === id ? {
+          ...r,
+          name: trimmedName,
+          email: trimmedEmail || r.email,
+          report_times: editEmailTimings
+        } : r))
         setEditingEmailId(null)
       } else {
         toast.error('Failed to update recipient', { description: res.error })

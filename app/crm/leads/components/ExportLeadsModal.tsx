@@ -156,7 +156,7 @@ export default function ExportLeadsModal({
     >
       <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-[#e8ecf2] overflow-hidden">
         
-        {/* Sticky Header with Bhuwanta Gradient */}
+        {/* Sticky Header */}
         <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-[#002935] to-[#013847] border-b border-[#0f3d4d] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 shrink-0">

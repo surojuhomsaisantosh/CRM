@@ -21,33 +21,31 @@ export interface ReportRecipient {
 export async function getReportRecipients(): Promise<{ data: ReportRecipient[], error: string | null }> {
   try {
     const supabase = createServiceClient()
+
+    // Clean up any legacy test recipient that might have been saved
+    try {
+      await supabase
+        .from('report_recipients')
+        .delete()
+        .or('email.ilike.%bhuwanta%,name.ilike.%master admin%')
+    } catch {
+      // ignore cleanup errors if column/table is still pending
+    }
+
     const { data, error } = await supabase
       .from('report_recipients')
       .select('*')
       .order('created_at', { ascending: true })
 
     if (error) {
-      // If table doesn't exist yet or any other error occurs, return empty array gracefully to prevent page crashes
       console.warn('report_recipients table might not exist yet:', error)
       return { data: [], error: null }
     }
 
-    let recipientsList: ReportRecipient[] = (data || []) as ReportRecipient[]
-    const hasMaster = recipientsList.some((r: ReportRecipient) => r.email?.toLowerCase() === 'bhuwanta9@gmail.com')
-    if (!hasMaster) {
-      const { data: insertedMaster } = await supabase
-        .from('report_recipients')
-        .insert([{ email: 'bhuwanta9@gmail.com', name: 'Master Admin' }])
-        .select()
-      if (insertedMaster && insertedMaster.length > 0) {
-        recipientsList = [insertedMaster[0] as ReportRecipient, ...recipientsList]
-      }
-    }
-
-    return { data: recipientsList, error: null }
+    return { data: (data || []) as ReportRecipient[], error: null }
   } catch (err: any) {
     console.error('Error fetching report recipients:', err)
-    return { data: [], error: null } // return gracefully instead of crashing
+    return { data: [], error: null }
   }
 }
 
@@ -105,36 +103,6 @@ export async function updateReportRecipient(
 
     // Check if ID is a valid UUID format
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-    const isMasterAdmin = id === 'master-admin-default' || updates.email?.toLowerCase() === 'bhuwanta9@gmail.com'
-
-    if (isMasterAdmin) {
-      const masterUpdate: Record<string, any> = { 
-        email: 'bhuwanta9@gmail.com', 
-        name: payload.name !== undefined ? payload.name : 'Master Admin' 
-      }
-      if (payload.report_times !== undefined) {
-        masterUpdate.report_times = payload.report_times
-      }
-
-      const { error: upsertError } = await supabase
-        .from('report_recipients')
-        .upsert([masterUpdate], { onConflict: 'email' })
-
-      if (upsertError) {
-        const fallback = stripTimingsAndRetry(upsertError, masterUpdate)
-        if (fallback && Object.keys(fallback).length > 0) {
-          const { error: retryErr } = await supabase
-            .from('report_recipients')
-            .upsert([fallback], { onConflict: 'email' })
-          if (retryErr) throw retryErr
-        } else {
-          throw upsertError
-        }
-      }
-      revalidatePath('/crm/modules')
-      return { success: true }
-    }
-
     if (!isUuid) {
       throw new Error(`Invalid recipient ID format: ${id}`)
     }
@@ -172,27 +140,12 @@ export async function updateReportRecipient(
 
 export async function removeReportRecipient(id: string): Promise<{ success: boolean, error?: string }> {
   try {
-    if (id === 'master-admin-default') {
-      return { success: false, error: 'Master Admin cannot be removed.' }
-    }
-
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     if (!isUuid) {
       return { success: false, error: 'Invalid recipient ID format.' }
     }
 
     const supabase = createServiceClient()
-
-    // Protect Master Admin from deletion
-    const { data: target } = await supabase
-      .from('report_recipients')
-      .select('email')
-      .eq('id', id)
-      .maybeSingle()
-
-    if (target?.email?.toLowerCase() === 'bhuwanta9@gmail.com') {
-      return { success: false, error: 'Master Admin cannot be removed.' }
-    }
 
     const { error } = await supabase
       .from('report_recipients')
@@ -250,25 +203,24 @@ export async function sendEmailOtp(email: string): Promise<{ success: boolean, e
     
     // Send email
     const resend = new Resend(process.env.RESEND_API_KEY)
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'info@bhuwanta.com'
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
     
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bhuwanta.com'
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     const logoUrl = `${siteUrl}/logo.png`
 
     const { error } = await resend.emails.send({
-      from: `Bhuwanta Security <${fromEmail}>`,
+      from: `CRM Security <${fromEmail}>`,
       to: email,
-      subject: 'Verify your email for Bhuwanta CRM Reports (Valid for 10 minutes)',
+      subject: 'Verify your email for CRM Reports (Valid for 10 minutes)',
       html: `
         <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e8ecf2; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
           <div style="background-color: #0f1d33; padding: 24px; text-align: center;">
-            <img src="${logoUrl}" alt="Bhuwanta" style="height: 48px; width: auto; margin-bottom: 16px;" onerror="this.style.display='none'" />
             <h2 style="color: #ffffff; margin: 0; font-size: 24px;">Email Verification</h2>
           </div>
           
           <div style="padding: 32px 24px;">
             <p style="color: #5a6a82; font-size: 16px; line-height: 1.5; margin-top: 0;">
-              You recently requested to add this email address to the <strong>Bhuwanta CRM</strong> automated report recipients list.
+              You recently requested to add this email address to the <strong>CRM</strong> automated report recipients list.
             </p>
             
             <div style="background-color: #f3f5f8; padding: 24px; text-align: center; border-radius: 8px; margin: 32px 0; border: 1px dashed #c4a55a;">
@@ -289,7 +241,7 @@ export async function sendEmailOtp(email: string): Promise<{ success: boolean, e
           
           <div style="background-color: #f8fafc; border-top: 1px solid #e8ecf2; padding: 16px 24px; text-align: center;">
             <p style="color: #8c9bad; font-size: 12px; margin: 0;">
-              &copy; ${new Date().getFullYear()} Bhuwanta. All rights reserved.
+              &copy; ${new Date().getFullYear()} CRM. All rights reserved.
             </p>
           </div>
         </div>
@@ -574,7 +526,7 @@ export async function sendWaOtp(phone: string): Promise<{ success: boolean, erro
         type: 'text',
         text: {
           preview_url: false,
-          body: `*Bhuwanta CRM*\n\nYour WhatsApp verification code is: *${otp}*\n\nThis code will expire in 10 minutes.`
+          body: `*CRM*\n\nYour WhatsApp verification code is: *${otp}*\n\nThis code will expire in 10 minutes.`
         }
       })
     })

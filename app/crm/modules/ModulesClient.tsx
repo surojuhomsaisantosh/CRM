@@ -4,7 +4,6 @@ import React, { useState, useRef, useTransition } from 'react'
 import { Blocks } from 'lucide-react'
 import { toast } from 'sonner'
 import { 
-  toggleOtpModuleStatus, 
   removeReportRecipient, 
   updateReportRecipient,
   testReportEmail, 
@@ -22,7 +21,6 @@ import {
 import type { AlertRecipient } from '@/lib/monitoring/alerts'
 import { extractTenDigitWaPhone, normalizeWaRecipientPhone, normalizeWaReportTimings } from '@/lib/phone-input'
 
-import WebsiteDownloadsOtp from './components/WebsiteDownloadsOtp'
 import AutomatedReportsEmail from './components/AutomatedReportsEmail'
 import WhatsAppReports from './components/WhatsAppReports'
 import AccessControl from './components/AccessControl'
@@ -30,7 +28,6 @@ import LeadStatusManager from './components/LeadStatusManager'
 import Alerts from './components/Alerts'
 
 interface ModulesClientProps {
-  initialOtpEnabled: boolean
   initialRecipients: ReportRecipient[]
   initialWaRecipients: WaRecipient[]
   initialAlertRecipients?: AlertRecipient[]
@@ -39,8 +36,7 @@ interface ModulesClientProps {
   initialLeadStatuses?: LeadStatus[]
 }
 
-export default function ModulesClient({ initialOtpEnabled, initialRecipients, initialWaRecipients, initialAlertRecipients = [], roles, users, initialLeadStatuses = [] }: ModulesClientProps) {
-  const [otpEnabled, setOtpEnabled] = useState(initialOtpEnabled)
+export default function ModulesClient({ initialRecipients, initialWaRecipients, initialAlertRecipients = [], roles, users, initialLeadStatuses = [] }: ModulesClientProps) {
   const [isPending, startTransition] = useTransition()
   
   const [recipients, setRecipients] = useState<ReportRecipient[]>(initialRecipients)
@@ -81,7 +77,6 @@ export default function ModulesClient({ initialOtpEnabled, initialRecipients, in
   const [isRefreshingWa, setIsRefreshingWa] = useState(false)
 
   // Synchronous double-click mutex refs
-  const isTogglingOtpRef = useRef(false)
   const isSendingOtpRef = useRef(false)
   const isVerifyingRef = useRef(false)
   const isSavingEmailEditRef = useRef(false)
@@ -103,44 +98,6 @@ export default function ModulesClient({ initialOtpEnabled, initialRecipients, in
     } finally {
       setIsRefreshingWa(false)
     }
-  }
-
-  // --- OTP Toggle Handler ---
-  const handleToggleOtp = (nextState: boolean) => {
-    if (isTogglingOtpRef.current) return
-    isTogglingOtpRef.current = true
-    const prevState = otpEnabled
-    setOtpEnabled(nextState)
-
-    startTransition(async () => {
-      try {
-        const result = await toggleOtpModuleStatus(nextState)
-        if (result.success) {
-          setOtpEnabled(result.downloadOtpEnabled)
-          if (result.downloadOtpEnabled) {
-            toast.success('Website Downloads OTP Enabled', {
-              description: 'Brochure and layout downloads now require SMS OTP verification.',
-            })
-          } else {
-            toast.warning('Website Downloads OTP Disabled', {
-              description: 'Downloads will open directly without asking for phone, name, or OTP.',
-            })
-          }
-        } else {
-          setOtpEnabled(prevState)
-          toast.error('Failed to update setting', {
-            description: result.error || 'Please try again.',
-          })
-        }
-      } catch {
-        setOtpEnabled(prevState)
-        toast.error('Network error', {
-          description: 'Could not communicate with the server.',
-        })
-      } finally {
-        isTogglingOtpRef.current = false
-      }
-    })
   }
 
   // --- Email Handlers ---
@@ -437,15 +394,9 @@ export default function ModulesClient({ initialOtpEnabled, initialRecipients, in
 
       {/* Modules Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pb-20">
-        {/* Left Column: Downloads OTP */}
+        {/* Left Column: Access Control */}
         <div className="space-y-6">
           <AccessControl roles={roles} users={users} />
-          
-          <WebsiteDownloadsOtp
-            otpEnabled={otpEnabled}
-            isPending={isPending}
-            onToggleOtp={handleToggleOtp}
-          />
         </div>
 
         {/* Right Column: Reports Modules */}

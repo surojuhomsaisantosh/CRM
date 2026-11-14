@@ -1,5 +1,4 @@
 import ModulesClient from './ModulesClient'
-import { getOtpDownloadEnabled } from '@/lib/otp-config'
 import { requireAccess } from '@/lib/auth/permissions'
 import { getReportRecipients, getWaRecipients, getLeadStatuses, getAlertRecipients } from './actions'
 import { getRoles, listAdminUsers } from '../users/actions'
@@ -9,12 +8,11 @@ export const revalidate = 0
 
 export const metadata = {
   title: 'Modules & Feature Controls | CRM',
-  description: 'Manage website modules, lead pipeline statuses, and OTP verification settings',
+  description: 'Manage notification recipients, lead pipeline statuses, and access permissions',
 }
 
 export default async function ModulesPage() {
   await requireAccess('modules')
-  const initialOtpEnabled = await getOtpDownloadEnabled()
   const { data: initialRecipients } = await getReportRecipients()
   const { data: initialWaRecipients } = await getWaRecipients()
   const { data: initialLeadStatuses } = await getLeadStatuses()
@@ -24,7 +22,6 @@ export default async function ModulesPage() {
 
   return (
     <ModulesClient 
-      initialOtpEnabled={initialOtpEnabled} 
       initialRecipients={initialRecipients || []} 
       initialWaRecipients={initialWaRecipients || []}
       initialAlertRecipients={initialAlertRecipients || []}

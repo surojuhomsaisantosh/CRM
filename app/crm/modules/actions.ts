@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient, isSupabaseConfigured } from '@/lib/supabase/server'
-import { INITIAL_DEMO_STATUSES } from '@/lib/demo-data'
 import { redis } from '@/lib/redis'
 import { Resend } from 'resend'
 import { normalizeWaRecipientPhone, normalizeWaReportTimings } from '@/lib/phone-input'
@@ -789,7 +788,7 @@ export interface LeadStatus {
 export async function getLeadStatuses(): Promise<{ success: boolean; data: LeadStatus[]; error?: string }> {
   try {
     if (!isSupabaseConfigured()) {
-      return { success: true, data: INITIAL_DEMO_STATUSES as any };
+      return { success: true, data: [] };
     }
 
     const supabase = createServiceClient()

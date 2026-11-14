@@ -71,16 +71,7 @@ export async function listAdminUsers() {
   if (!supabaseUrl) {
     return {
       success: true,
-      users: [
-        {
-          id: 'demo-super-admin-001',
-          email: 'admin@crm.internal',
-          name: 'Demo Administrator',
-          role: 'Super Admin',
-          created_at: new Date().toISOString(),
-          is_disabled: false,
-        }
-      ]
+      users: []
     }
   }
 
@@ -92,19 +83,9 @@ export async function listAdminUsers() {
     .order('created_at', { ascending: true })
 
   if (profilesError) {
-    // If profiles table does not exist or connection failed, return graceful demo list
     return {
       success: true,
-      users: [
-        {
-          id: 'demo-super-admin-001',
-          email: 'admin@crm.internal',
-          name: 'Demo Administrator',
-          role: 'Super Admin',
-          created_at: new Date().toISOString(),
-          is_disabled: false,
-        }
-      ]
+      users: []
     }
   }
 

@@ -18,7 +18,6 @@ import {
   X
 } from "lucide-react";
 import { createClient, isBrowserSupabaseConfigured } from "@/lib/supabase/client";
-import { INITIAL_DEMO_LEADS } from "@/lib/demo-data";
 
 export default function DashboardPage() {
   const [totalLeads, setTotalLeads] = useState<number | null>(null)
@@ -40,14 +39,14 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchLeads() {
       if (!isBrowserSupabaseConfigured()) {
-        setTotalLeads(INITIAL_DEMO_LEADS.length);
-        setTodaysLeads(2);
-        setNewLeads(INITIAL_DEMO_LEADS.filter(l => l.status === 'new').length);
+        setTotalLeads(0);
+        setTodaysLeads(0);
+        setNewLeads(0);
         setUncontacted(0);
-        setContacted(INITIAL_DEMO_LEADS.filter(l => l.status === 'contacted').length);
-        setQualified(INITIAL_DEMO_LEADS.filter(l => l.status === 'qualified').length);
+        setContacted(0);
+        setQualified(0);
         setRejected(0);
-        setClosed(INITIAL_DEMO_LEADS.filter(l => l.status === 'won').length);
+        setClosed(0);
         return;
       }
 
@@ -95,12 +94,8 @@ export default function DashboardPage() {
       setIsTableLoading(true);
 
       if (!isBrowserSupabaseConfigured()) {
-        let list = [...INITIAL_DEMO_LEADS];
-        if (filterId !== 'total' && filterId !== 'todays') {
-          list = list.filter((l) => l.status === filterId);
-        }
-        setTableLeads(list);
-        setTableCount(list.length);
+        setTableLeads([]);
+        setTableCount(0);
         setIsTableLoading(false);
         return;
       }

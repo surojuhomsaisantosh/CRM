@@ -5,16 +5,15 @@ import {
   Palette,
   Upload,
   RotateCcw,
-  Sparkles,
   Save,
   CheckCircle2,
   Trash2,
   Search,
-  Check,
+  Eye,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  COLOR_PALETTES,
   BrandSettings,
   DEFAULT_BRAND_SETTINGS,
   getStoredBrandSettings,
@@ -22,7 +21,6 @@ import {
   hslToHex,
   hexToHsl,
   parseColorSearch,
-  NAMED_COLOR_MAP,
 } from '@/lib/branding';
 
 const WHEEL_SIZE = 200;
@@ -35,6 +33,7 @@ export default function BrandingSettings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isDraggingWheel, setIsDraggingWheel] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -88,7 +87,6 @@ export default function BrandingSettings() {
           data[idx] = Math.round((r1 + m) * 255);
           data[idx + 1] = Math.round((g1 + m) * 255);
           data[idx + 2] = Math.round((b1 + m) * 255);
-          // Antialiased edge
           const alpha = dist > RADIUS - 4 ? Math.round((1 - (dist - (RADIUS - 4)) / 2) * 255) : 255;
           data[idx + 3] = alpha;
         } else {
@@ -136,14 +134,12 @@ export default function BrandingSettings() {
     setIsDraggingWheel(false);
   };
 
-  // Touch event support for tablets
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length > 0) {
       handleWheelPick(e.touches[0].clientX, e.touches[0].clientY);
     }
   };
 
-  // Cursor position on the color wheel
   const getCursorPos = () => {
     const angleRad = (hsl.h * Math.PI) / 180;
     const dist = (hsl.s / 100) * (RADIUS - 2);
@@ -155,7 +151,6 @@ export default function BrandingSettings() {
 
   const cursorPos = getCursorPos();
 
-  // Apply color to settings
   const applyColor = (hex: string) => {
     setSettings((prev) => ({
       ...prev,
@@ -178,19 +173,10 @@ export default function BrandingSettings() {
       applyColor(matched.hex);
       toast.success(`Applied ${matched.label} (${matched.hex})`);
     } else {
-      toast.error(`Color "${searchQuery}" not recognized. Try a color name (gold, blue, ruby) or hex (#ff5500).`);
+      toast.error(`Color "${searchQuery}" not recognized. Try a name (gold, blue, ruby) or hex (#ff5500).`);
     }
   };
 
-  // Preset quick tags click
-  const handlePresetClick = (hex: string) => {
-    setCurrentHex(hex);
-    const newHsl = hexToHsl(hex);
-    setHsl(newHsl);
-    applyColor(hex);
-  };
-
-  // Lightness slider change
   const handleLightnessChange = (newL: number) => {
     const updatedHsl = { ...hsl, l: newL };
     setHsl(updatedHsl);
@@ -238,7 +224,6 @@ export default function BrandingSettings() {
     toast.info('Custom logo removed. Default CRM mark will be used.');
   };
 
-  // Save changes
   const handleSaveAll = () => {
     saveStoredBrandSettings(settings);
     setIsSaved(true);
@@ -246,31 +231,17 @@ export default function BrandingSettings() {
     setTimeout(() => setIsSaved(false), 3000);
   };
 
-  // Reset to default
   const handleResetDefaults = () => {
     setSettings(DEFAULT_BRAND_SETTINGS);
     setCurrentHex('#c4a55a');
     setHsl(hexToHsl('#c4a55a'));
     saveStoredBrandSettings(DEFAULT_BRAND_SETTINGS);
     setIsSaved(true);
-    toast.info('Reset branding to default executive theme');
+    toast.info('Reset branding to default theme');
   };
 
-  // Popular search color tags
-  const popularColors = [
-    { name: 'Gold', hex: '#c4a55a' },
-    { name: 'Emerald', hex: '#10b981' },
-    { name: 'Sapphire', hex: '#3b82f6' },
-    { name: 'Ruby', hex: '#e11d48' },
-    { name: 'Violet', hex: '#8b5cf6' },
-    { name: 'Cyan', hex: '#06b6d4' },
-    { name: 'Amber', hex: '#f59e0b' },
-    { name: 'Coral', hex: '#fb7185' },
-    { name: 'Teal', hex: '#14b8a6' },
-  ];
-
   return (
-    <div className="bg-white rounded-2xl border border-[#e8ecf2] p-6 shadow-sm space-y-8">
+    <div className="bg-white rounded-2xl border border-[#e8ecf2] p-6 shadow-sm space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#f1f4f8]">
         <div>
@@ -283,8 +254,8 @@ export default function BrandingSettings() {
             </div>
             <h2 className="text-xl font-bold text-[#0f1d33]">Branding & Appearance</h2>
           </div>
-          <p className="text-sm text-[#5a6a80] mt-1">
-            Customize your company logo and choose your RGB color palette applied across the entire software.
+          <p className="text-xs text-[#5a6a80] mt-1">
+            Customize your company logo and choose your RGB color palette.
           </p>
         </div>
 
@@ -309,24 +280,39 @@ export default function BrandingSettings() {
         </div>
       </div>
 
-      {/* SECTION 1: CHOOSE YOUR LOGO */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[#0f1d33] flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentHex }} />
-            Choose Your Logo
-          </h3>
-          <p className="text-xs text-[#5a6a80] mt-0.5">
-            Upload your company logo. It will be displayed on the login page above the CRM title and in the sidebar header.
-          </p>
-        </div>
+      {/* SECTION 1: UPLOAD LOGO (COMPACT SINGLE ROW WITH UPLOAD BUTTON & EYE PREVIEW POPUP) */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#f8fafc] border border-[#e8ecf2] rounded-xl">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs"
+              style={{ backgroundColor: currentHex }}
+            >
+              <Upload size={17} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-[#0f1d33] flex items-center gap-2">
+                <span>Company Logo</span>
+                {settings.customLogoUrl ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Custom Active
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-[#5a6a80] bg-[#eef2f6] px-2 py-0.5 rounded-full">
+                    Default CRM Mark
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#5a6a80] truncate">
+                {settings.customLogoUrl
+                  ? 'Custom logo uploaded and applied to login & header.'
+                  : 'No custom logo uploaded. Click Upload to replace default mark.'}
+              </p>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Upload card */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="group relative border-2 border-dashed border-[#d5dce6] hover:border-[#0f1d33] rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all bg-[#fafbfc] hover:bg-white"
-          >
+          <div className="flex items-center gap-2 shrink-0">
             <input
               ref={fileInputRef}
               type="file"
@@ -334,73 +320,43 @@ export default function BrandingSettings() {
               onChange={handleLogoUpload}
               className="hidden"
             />
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center text-white mb-3 shadow-sm transition-transform group-hover:scale-105"
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-lg shadow-xs hover:opacity-90 transition-all flex items-center gap-1.5"
               style={{ backgroundColor: currentHex }}
             >
-              <Upload size={22} />
-            </div>
-            <p className="text-sm font-semibold text-[#0f1d33]">
-              {settings.customLogoUrl ? 'Replace Company Logo' : 'Upload Company Logo'}
-            </p>
-            <p className="text-xs text-[#5a6a80] mt-1">
-              Supports SVG, PNG, JPG, or WebP (transparent recommended, max 2MB)
-            </p>
-          </div>
+              <Upload size={14} />
+              {settings.customLogoUrl ? 'Replace Logo' : 'Upload Logo'}
+            </button>
 
-          {/* Current Logo Preview card */}
-          <div className="border border-[#e8ecf2] rounded-2xl p-5 flex flex-col justify-between bg-[#f8fafc]">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#5a6a80]">
-                Active Logo Preview
-              </span>
-              {settings.customLogoUrl && (
-                <button
-                  type="button"
-                  onClick={handleRemoveLogo}
-                  className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold"
-                >
-                  <Trash2 size={13} />
-                  Remove
-                </button>
-              )}
-            </div>
+            {/* Eye Button to open Preview Popup */}
+            <button
+              type="button"
+              onClick={() => setShowPreviewModal(true)}
+              title="View Logo Preview"
+              className="p-1.5 text-[#0f1d33] hover:text-black bg-white hover:bg-[#edf2f7] border border-[#d5dce6] rounded-lg transition-colors flex items-center justify-center shadow-2xs"
+            >
+              <Eye size={16} />
+            </button>
 
-            <div className="flex items-center justify-center py-4 bg-white rounded-xl border border-[#e8ecf2] shadow-inner min-h-[110px]">
-              {settings.customLogoUrl ? (
-                <img
-                  src={settings.customLogoUrl}
-                  alt="Custom Company Logo"
-                  className="max-h-20 max-w-[200px] object-contain"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-1.5 text-center">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center font-mono font-extrabold text-sm border shadow-sm"
-                    style={{
-                      backgroundColor: '#0f1d33',
-                      color: currentHex,
-                      borderColor: currentHex,
-                    }}
-                  >
-                    CRM
-                  </div>
-                  <span className="text-xs text-[#5a6a80]">Default CRM Mark (No file uploaded)</span>
-                </div>
-              )}
-            </div>
-
-            <p className="text-[11px] text-[#5a6a80] mt-2">
-              {settings.customLogoUrl
-                ? 'Your custom logo will render in place of the default CRM emblem.'
-                : 'Upload a logo file to display your brand icon on the login screen.'}
-            </p>
+            {/* Remove Button if custom logo is present */}
+            {settings.customLogoUrl && (
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                title="Remove Custom Logo"
+                className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors flex items-center justify-center shadow-2xs"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* SECTION 2: CHOOSE YOUR COLOR PALETTE (RGB WHEEL + COLOR SEARCH BAR) */}
-      <div className="space-y-5 pt-4 border-t border-[#f1f4f8]">
+      {/* SECTION 2: CHOOSE YOUR COLOR PALETTE (RGB WHEEL + COLOR SEARCH BAR, NO QUICK PICKS) */}
+      <div className="space-y-4 pt-3 border-t border-[#f1f4f8]">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wider text-[#0f1d33] flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentHex }} />
@@ -411,8 +367,8 @@ export default function BrandingSettings() {
           </p>
         </div>
 
-        {/* Color Search Bar */}
-        <div className="space-y-2">
+        {/* Color Search Bar (No Quick Picks) */}
+        <div>
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <Search className="absolute left-3.5 text-[#8c9ba5]" size={16} />
             <input
@@ -428,42 +384,16 @@ export default function BrandingSettings() {
                 }
               }}
               placeholder="Search color name (e.g. gold, sapphire, emerald, ruby, violet, cyan) or Hex/RGB..."
-              className="w-full pl-10 pr-24 py-2.5 text-sm bg-[#f8fafc] border border-[#d5dce6] rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1d33] transition-all"
+              className="w-full pl-10 pr-24 py-2 text-sm bg-[#f8fafc] border border-[#d5dce6] rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1d33] transition-all"
             />
             <button
               type="submit"
-              className="absolute right-2 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm"
+              className="absolute right-2 px-3 py-1 text-xs font-semibold text-white rounded-lg shadow-sm"
               style={{ backgroundColor: currentHex }}
             >
               Search
             </button>
           </form>
-
-          {/* Popular Color Search Quick Chips */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-[#5a6a80] font-medium mr-1">Quick Picks:</span>
-            {popularColors.map((color) => {
-              const isActive = currentHex.toLowerCase() === color.hex.toLowerCase();
-              return (
-                <button
-                  key={color.name}
-                  type="button"
-                  onClick={() => handlePresetClick(color.hex)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                    isActive
-                      ? 'border-[#0f1d33] bg-[#0f1d33] text-white shadow-xs font-bold'
-                      : 'border-[#e2e8f0] bg-white text-[#334155] hover:bg-[#f8fafc]'
-                  }`}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0 border border-black/10"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  {color.name}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* RGB Circle & Interactive Sliders Layout */}
@@ -593,6 +523,109 @@ export default function BrandingSettings() {
           </div>
         </div>
       </div>
+
+      {/* LOGO PREVIEW POPUP MODAL */}
+      {showPreviewModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+          onClick={() => setShowPreviewModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-[#e8ecf2] shadow-2xl max-w-md w-full p-6 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#f1f4f8]">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white"
+                  style={{ backgroundColor: currentHex }}
+                >
+                  <Eye size={15} />
+                </div>
+                <h3 className="text-base font-bold text-[#0f1d33]">Company Logo Preview</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="text-[#8a99ad] hover:text-[#0f1d33] p-1.5 rounded-lg hover:bg-[#f1f4f8] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#5a6a80] block mb-1.5">
+                  Light Background (Login Screen & Forms)
+                </span>
+                <div className="flex flex-col items-center justify-center p-6 bg-[#f8fafc] border border-[#e8ecf2] rounded-xl min-h-[110px]">
+                  {settings.customLogoUrl ? (
+                    <img
+                      src={settings.customLogoUrl}
+                      alt="Logo Preview"
+                      className="max-h-16 max-w-[200px] object-contain"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center font-mono font-extrabold text-sm border shadow-sm"
+                        style={{
+                          backgroundColor: '#0f1d33',
+                          color: currentHex,
+                          borderColor: currentHex,
+                        }}
+                      >
+                        CRM
+                      </div>
+                      <span className="text-xs text-[#5a6a80]">Default CRM Mark</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#5a6a80] block mb-1.5">
+                  Dark Background (Sidebar Header)
+                </span>
+                <div className="flex flex-col items-center justify-center p-6 bg-[#0f1d33] border border-black/20 rounded-xl min-h-[110px]">
+                  {settings.customLogoUrl ? (
+                    <img
+                      src={settings.customLogoUrl}
+                      alt="Logo Preview"
+                      className="max-h-16 max-w-[200px] object-contain"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center font-mono font-extrabold text-sm border shadow-sm"
+                        style={{
+                          backgroundColor: '#1e3a5f',
+                          color: currentHex,
+                          borderColor: currentHex,
+                        }}
+                      >
+                        CRM
+                      </div>
+                      <span className="text-xs text-slate-400">Default CRM Mark</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-xs hover:opacity-90 transition-all"
+                style={{ backgroundColor: currentHex }}
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

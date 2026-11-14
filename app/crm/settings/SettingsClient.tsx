@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, Key, Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { Loader2, Key, Eye, EyeOff } from 'lucide-react'
 import BrandingSettings from './BrandingSettings'
 
 export default function SettingsClient() {
@@ -149,17 +149,6 @@ export default function SettingsClient() {
                 </div>
               </form>
             </div>
-          </div>
-
-          {/* Quick Security Info Box */}
-          <div className="rounded-2xl border border-[#e8ecf2] bg-[#f8fafc] p-5 text-xs text-[#5a6a82] space-y-2">
-            <div className="flex items-center gap-2 font-bold text-[#0f1d33]">
-              <ShieldCheck size={16} className="text-emerald-600" />
-              <span>Session & Data Protection</span>
-            </div>
-            <p>
-              Your CRM session is secured with Supabase Auth cryptographic JWT tokens. Role permissions are enforced across all server endpoints.
-            </p>
           </div>
         </div>
       </div>

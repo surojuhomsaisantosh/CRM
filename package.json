@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node tests/run-all-tests.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

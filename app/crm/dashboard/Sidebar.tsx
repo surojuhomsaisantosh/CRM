@@ -106,13 +106,21 @@ export function Sidebar({
       }`}
     >
       {/* Brand Header */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-[#e8ecf2]">
+      <div
+        className={`flex items-center ${
+          isCollapsed ? 'justify-between px-2.5' : 'justify-between px-4'
+        } h-16 border-b border-[#e8ecf2]`}
+      >
         <Link
           href="/crm"
           onClick={onNavigate}
-          className="flex items-center overflow-hidden transition-opacity hover:opacity-90"
+          className="flex items-center shrink-0 transition-opacity hover:opacity-90"
         >
-          <span className={`${isCollapsed ? 'text-sm' : 'text-xl'} font-black tracking-wider text-black`}>
+          <span
+            className={`${
+              isCollapsed ? 'text-sm' : 'text-xl'
+            } font-black tracking-tight text-black whitespace-nowrap shrink-0`}
+          >
             CRM
           </span>
         </Link>
@@ -120,7 +128,7 @@ export function Sidebar({
         {/* Collapse toggle button for desktop */}
         <button
           onClick={toggleCollapse}
-          className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg text-[#5a6a82] hover:text-[#0f1d33] hover:bg-[#f3f5f8] transition-colors"
+          className="hidden md:flex items-center justify-center w-6 h-6 rounded-lg text-[#5a6a82] hover:text-[#0f1d33] hover:bg-[#f3f5f8] transition-colors shrink-0"
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -162,37 +170,45 @@ export function Sidebar({
       <div className="p-3 border-t border-[#e8ecf2] bg-[#fafbfc]">
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#eef2f7] text-[#0f1d33] font-bold text-xs shrink-0" title={userName || userEmail || 'User'}>
+            <div
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0f1d33] text-white font-bold text-xs shrink-0 shadow-xs"
+              title={`${userName || userEmail || 'User'} (${userRole})`}
+            >
               {userName ? userName.charAt(0).toUpperCase() : (userEmail?.charAt(0).toUpperCase() || 'U')}
             </div>
             <button
               onClick={handleLogout}
               title="Log out"
-              className="p-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-md transition-colors shrink-0 shadow-2xs"
+              className="p-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-lg transition-colors shrink-0 shadow-2xs cursor-pointer"
             >
               <LogOut className="w-4 h-4 text-red-600" />
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-white border border-[#e8ecf2]">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#eef2f7] text-[#0f1d33] font-bold text-xs shrink-0">
+          <div className="space-y-2.5">
+            {/* User Profile Card */}
+            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-[#e8ecf2] shadow-2xs">
+              <div className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0f1d33] text-white font-bold text-xs shrink-0 shadow-xs">
                 {userName ? userName.charAt(0).toUpperCase() : (userEmail?.charAt(0).toUpperCase() || 'U')}
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-[#0f1d33] truncate">
+              <div className="flex flex-col min-w-0 flex-1">
+                <span
+                  className="text-xs font-bold text-[#0f1d33] truncate"
+                  title={userName || userEmail || 'User'}
+                >
                   {userName || userEmail?.split('@')[0] || 'User'}
                 </span>
-                <span className="text-[10px] text-[#8a99ad] truncate capitalize">
+                <span className="text-[10px] font-semibold text-[#5a6a82] tracking-wide truncate capitalize">
                   {userRole}
                 </span>
               </div>
             </div>
 
+            {/* Logout Button on Separate Line */}
             <button
               onClick={handleLogout}
               title="Log out"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors shrink-0 shadow-2xs"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-[0.99] cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5 text-red-600" />
               <span>Log out</span>

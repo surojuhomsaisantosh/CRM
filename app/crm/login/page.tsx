@@ -100,9 +100,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8fa] p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center mb-1">
-            <BrandLogo size="lg" />
+            <BrandLogo size="2xl" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f1d33] tracking-tight">
             Login to C<span style={{ color: 'var(--crm-accent, #c4a55a)' }}>RM</span>

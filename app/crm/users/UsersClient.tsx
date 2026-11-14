@@ -398,60 +398,64 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
           </p>
         </div>
         {userRole === 'Super Admin' && (
-          <button
-            onClick={openModal}
-            className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[#c4a55a] to-[#b3954c] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#c4a55a]/20 hover:opacity-90 transition-opacity whitespace-nowrap"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add User
-          </button>
-        )}
-      </div>
-
-      {/* Roles Filter Bar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <button
-          onClick={() => setActiveRoleFilter(null)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!activeRoleFilter ? 'bg-[#1e3a5f] text-white' : 'bg-white border border-[#e8ecf2] text-[#5a6a82] hover:bg-[#f8fafc]'}`}
-        >
-          All
-        </button>
-        {roles.map(role => {
-          return (
-            <div key={role.id} className="relative group flex items-center">
-              <button
-                onClick={() => setActiveRoleFilter(role.name)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeRoleFilter === role.name ? 'bg-[#1e3a5f] text-white shadow-md' : 'bg-white border border-[#e8ecf2] text-[#5a6a82] hover:bg-[#f8fafc]'}`}
-              >
-                {role.name}
-              </button>
-            </div>
-          )
-        })}
-        {userRole === 'Super Admin' && (
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => {
-                setDeleteRoleError('')
-                setRoleToDelete('')
-                setFallbackRole('')
-                setIsDeleteRoleModalOpen(true)
-              }}
-              className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-dashed border-red-400 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1.5"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete Role
-            </button>
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsRoleModalOpen(true)}
-              className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-dashed border-[#c4a55a] text-[#c4a55a] hover:bg-[#c4a55a]/5 transition-colors flex items-center gap-1.5"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg bg-white border border-[#e8ecf2] px-3.5 py-2.5 text-sm font-semibold text-[#1e3a5f] hover:bg-[#f3f5f8] transition-colors whitespace-nowrap shadow-xs"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="mr-1.5 h-4 w-4" />
               Add Role
+            </button>
+            <button
+              onClick={openModal}
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[#c4a55a] to-[#b3954c] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#c4a55a]/20 hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add User
             </button>
           </div>
         )}
       </div>
+
+      {/* Roles Filter Bar (Only displayed when custom roles exist) */}
+      {roles.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <button
+            onClick={() => setActiveRoleFilter(null)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!activeRoleFilter ? 'bg-[#1e3a5f] text-white' : 'bg-white border border-[#e8ecf2] text-[#5a6a82] hover:bg-[#f8fafc]'}`}
+          >
+            All
+          </button>
+          {roles.map(role => {
+            return (
+              <div key={role.id} className="relative group flex items-center">
+                <button
+                  onClick={() => setActiveRoleFilter(role.name)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeRoleFilter === role.name ? 'bg-[#1e3a5f] text-white shadow-md' : 'bg-white border border-[#e8ecf2] text-[#5a6a82] hover:bg-[#f8fafc]'}`}
+                >
+                  {role.name}
+                </button>
+              </div>
+            )
+          })}
+          {userRole === 'Super Admin' && (
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => {
+                  setDeleteRoleError('')
+                  setRoleToDelete('')
+                  setFallbackRole('')
+                  setIsDeleteRoleModalOpen(true)
+                }}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-dashed border-red-400 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Role
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-xl border border-[#e8ecf2] bg-white shadow-sm overflow-hidden">
         <div className="p-4 border-b border-[#e8ecf2] bg-white flex flex-col sm:flex-row gap-4 justify-between items-center">
@@ -497,8 +501,12 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
               <tbody className="divide-y divide-[#e8ecf2]">
                 {paginatedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-[#5a6a82]">
-                      No users found matching your search.
+                    <td colSpan={6} className="px-6 py-12 text-center text-[#5a6a82]">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Users className="h-8 w-8 text-[#8a99ad]" />
+                        <span className="font-medium text-sm">No users found.</span>
+                        <p className="text-xs text-[#8a99ad]">Click &quot;Add User&quot; above to create a new user account.</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -858,12 +866,19 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                       name="role"
                       id="role"
                       required
-                      defaultValue={activeRoleFilter || 'Telecaller'}
+                      defaultValue={activeRoleFilter || (roles[0]?.name || 'Admin')}
                       className="w-full rounded-lg border border-[#e8ecf2] bg-[#f3f5f8] pl-3 pr-10 py-2.5 text-sm text-[#0f1d33] outline-none focus:border-[#1e3a5f] appearance-none cursor-pointer"
                     >
-                      {roles.map(r => (
-                        <option key={r.id} value={r.name}>{r.name}</option>
-                      ))}
+                      {roles.length > 0 ? (
+                        roles.map(r => (
+                          <option key={r.id} value={r.name}>{r.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Admin">Admin</option>
+                          <option value="Super Admin">Super Admin</option>
+                        </>
+                      )}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#5a6a82]">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1065,9 +1080,16 @@ export default function UsersClient({ userRole = 'Admin' }: { userRole?: string 
                       defaultValue={selectedUserToEdit.role || 'Admin'}
                       className="w-full rounded-lg border border-[#e8ecf2] bg-white pl-3 pr-10 py-2 text-sm text-[#0f1d33] outline-none focus:ring-2 focus:ring-[#c4a55a] focus:border-transparent appearance-none cursor-pointer"
                     >
-                      {roles.map(r => (
-                        <option key={r.id} value={r.name}>{r.name}</option>
-                      ))}
+                      {roles.length > 0 ? (
+                        roles.map(r => (
+                          <option key={r.id} value={r.name}>{r.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Admin">Admin</option>
+                          <option value="Super Admin">Super Admin</option>
+                        </>
+                      )}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#5a6a82]">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

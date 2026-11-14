@@ -132,8 +132,10 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
   }
 
   const handlePhoneChange = (index: number, val: string) => {
+    // Only permit digits (0-9) and strictly limit to 10 digits
+    const digitsOnly = val.replace(/\D/g, '').slice(0, 10)
     const updated = [...phoneNumbers]
-    updated[index] = val
+    updated[index] = digitsOnly
     setPhoneNumbers(updated)
   }
 
@@ -156,6 +158,23 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
       return
     }
 
+    // Clean and validate contact numbers
+    const cleanedPhones = phoneNumbers
+      .map((p) => p.replace(/\D/g, '').slice(0, 10))
+      .filter(Boolean)
+
+    for (const phone of cleanedPhones) {
+      if (phone.length !== 10) {
+        toast.error(`Phone number "${phone}" must be exactly 10 digits`)
+        return
+      }
+    }
+
+    if (cleanedPhones.length > 5) {
+      toast.error('Maximum 5 contact numbers allowed')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       if (editingProject) {
@@ -164,7 +183,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
           client_name: clientName,
           location,
           email,
-          phone_numbers: phoneNumbers
+          phone_numbers: cleanedPhones
         })
         if (res.error) {
           toast.error(res.error)
@@ -179,7 +198,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
           client_name: clientName,
           location,
           email,
-          phone_numbers: phoneNumbers
+          phone_numbers: cleanedPhones
         })
         if (res.error) {
           toast.error(res.error)
@@ -1183,7 +1202,12 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
               {/* Phone Numbers */}
               <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#0f1d33]">Contact Numbers (Max 5)</label>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs font-semibold text-[#0f1d33]">Contact Numbers (Max 5)</label>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#f1f5f9] text-[#5a6a82]">
+                      {phoneNumbers.length}/5
+                    </span>
+                  </div>
                   {phoneNumbers.length < 5 && (
                     <button
                       type="button"
@@ -1201,18 +1225,33 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
                       <span className="text-[11px] font-bold text-[#5a6a82] w-5 text-right shrink-0">
                         {idx + 1}.
                       </span>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => handlePhoneChange(idx, e.target.value)}
-                        placeholder="e.g. +91 98765 43210"
-                        className="flex-1 px-3 py-2 text-xs bg-[#f7f8fa] border border-[#e8ecf2] rounded-lg text-[#0f1d33] focus:outline-none focus:border-[#0f1d33] focus:bg-white transition-all"
-                      />
+                      <div className="relative flex-1">
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]{10}"
+                          maxLength={10}
+                          value={phone}
+                          onChange={(e) => handlePhoneChange(idx, e.target.value)}
+                          placeholder="Enter 10-digit mobile number"
+                          className="w-full px-3 py-2 pr-12 text-xs bg-[#f7f8fa] border border-[#e8ecf2] rounded-lg text-[#0f1d33] focus:outline-none focus:border-[#0f1d33] focus:bg-white transition-all font-mono"
+                        />
+                        {phone.length > 0 && (
+                          <span
+                            className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold font-mono ${
+                              phone.length === 10 ? 'text-emerald-600' : 'text-[#8a99ad]'
+                            }`}
+                          >
+                            {phone.length}/10
+                          </span>
+                        )}
+                      </div>
                       {phoneNumbers.length > 1 && (
                         <button
                           type="button"
                           onClick={() => handleRemovePhone(idx)}
                           className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors shrink-0 cursor-pointer"
+                          title="Remove phone number"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1220,6 +1259,9 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
                     </div>
                   ))}
                 </div>
+                <p className="text-[11px] text-[#8a99ad]">
+                  Only numbers (0-9) allowed. Each contact number must be exactly 10 digits.
+                </p>
               </div>
 
               {/* Modal Actions */}

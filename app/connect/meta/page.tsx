@@ -224,9 +224,35 @@ function ConnectMetaContent() {
             </div>
           </div>
 
-          <p className="text-xs text-[#8a99ad]">
-            Whenever a customer submits a lead form on Facebook or Instagram, your agency will receive it instantly. You may safely close this window.
-          </p>
+          {/* Prominent Close Notification Banner */}
+          <div className="rounded-xl bg-blue-50 border border-blue-200 p-4 space-y-2">
+            <p className="text-xs font-bold text-blue-900">
+              🎉 Setup Completed Successfully!
+            </p>
+            <p className="text-xs text-blue-800 leading-relaxed">
+              Whenever a customer submits a lead form on Facebook or Instagram, your agency will receive it instantly.
+            </p>
+            <p className="text-xs font-extrabold text-[#0f1d33] pt-1">
+              You can safely close this page now.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.close();
+                }
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-[#0f1d33] text-white text-xs font-bold hover:bg-[#1a2d4c] transition-all cursor-pointer shadow-xs"
+            >
+              Close This Page
+            </button>
+            <p className="text-[11px] text-[#8a99ad] mt-2">
+              (Or simply tap the close tab &times; button on your browser)
+            </p>
+          </div>
         </div>
       </div>
     );

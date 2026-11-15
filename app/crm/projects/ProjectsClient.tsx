@@ -254,10 +254,17 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
     const res = await generateClientConnectLink(project.id)
     setIsGeneratingLink(false)
 
-    if (res.success && res.connectUrl) {
+    if (res.success && res.token) {
+      // Dynamically derive current origin from browser window so links never point to localhost on production
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+      let finalConnectUrl = res.connectUrl
+      if (currentOrigin && (!finalConnectUrl || finalConnectUrl.includes('localhost:3000') || !finalConnectUrl.startsWith(currentOrigin))) {
+        finalConnectUrl = `${currentOrigin}/connect/meta?token=${res.token}`
+      }
+
       setGeneratedLinkData({
-        connectUrl: res.connectUrl,
-        token: res.token!,
+        connectUrl: finalConnectUrl,
+        token: res.token,
         expiresAt: res.expiresAt!
       })
     } else {

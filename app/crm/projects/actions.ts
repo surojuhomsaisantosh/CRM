@@ -2,6 +2,7 @@
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import {
   debugMetaAccessToken,
   fetchPageLeadForms,
@@ -295,7 +296,23 @@ export async function generateClientConnectLink(projectId: string) {
       return { success: false, error: `Failed to create invite token: ${tokenErr.message}` }
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    let origin = process.env.NEXT_PUBLIC_SITE_URL
+    if (!origin) {
+      try {
+        const headerList = await headers()
+        const host = headerList.get('x-forwarded-host') || headerList.get('host')
+        const proto = headerList.get('x-forwarded-proto') || (host?.includes('localhost') ? 'http' : 'https')
+        if (host) {
+          origin = `${proto}://${host}`
+        }
+      } catch {
+        // Fallback for isolated executions
+      }
+    }
+    if (!origin) {
+      origin = 'http://localhost:3000'
+    }
+
     const connectUrl = `${origin}/connect/meta?token=${token}`
 
     revalidatePath('/crm/projects')
@@ -618,12 +635,26 @@ export async function syncHistoricalMetaLeads(
       totalFetched += pullRes.leads.length
 
       for (const lead of pullRes.leads) {
-        // Check if phone or lead already exists to prevent duplicate
-        const { data: existing } = await supabaseAdmin
-          .from('leads')
-          .select('id')
-          .or(`phone.eq.${lead.phoneNumber},source_page.ilike.%${lead.leadId}%`)
-          .maybeSingle()
+        // Safe deduplication: check lead ID first, then phone number
+        let existing = null
+
+        if (lead.leadId) {
+          const { data: byLeadId } = await supabaseAdmin
+            .from('leads')
+            .select('id')
+            .ilike('source_page', `%${lead.leadId}%`)
+            .maybeSingle()
+          if (byLeadId) existing = byLeadId
+        }
+
+        if (!existing && lead.phoneNumber && lead.phoneNumber.trim().length >= 6) {
+          const { data: byPhone } = await supabaseAdmin
+            .from('leads')
+            .select('id')
+            .eq('phone', lead.phoneNumber.trim())
+            .maybeSingle()
+          if (byPhone) existing = byPhone
+        }
 
         if (!existing) {
           await supabaseAdmin

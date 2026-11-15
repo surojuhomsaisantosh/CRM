@@ -211,6 +211,77 @@ export async function fetchPageLeadForms(
 }
 
 /**
+ * Normalizes and extracts lead fields from Meta Graph API field_data array.
+ * Handles single full_name, separate first_name + last_name, email, city, and
+ * cleans phone prefixes (e.g. 'p:+919876543210' -> '+919876543210').
+ */
+export function parseMetaLeadFields(
+  fieldData: any[] = [],
+  leadId: string,
+  formId: string,
+  pageId: string = '',
+  createdTime: string = new Date().toISOString(),
+  defaultName: string = 'Meta Lead Prospect'
+): ParsedMetaLead {
+  const rawMap: Record<string, any> = {};
+  let fullName = '';
+  let firstName = '';
+  let lastName = '';
+  let email = '';
+  let phoneNumber = '';
+  let city = '';
+
+  (fieldData || []).forEach((f: any) => {
+    const rawName = f.name || '';
+    const fieldName = rawName.toLowerCase().trim();
+    const val = Array.isArray(f.values) ? f.values[0] : (f.values ?? '');
+    const stringVal = typeof val === 'string' ? val.trim() : String(val ?? '').trim();
+    rawMap[fieldName] = val;
+
+    if (fieldName === 'full_name' || fieldName === 'fullname' || (fieldName.includes('full') && fieldName.includes('name'))) {
+      fullName = stringVal;
+    } else if (fieldName === 'first_name' || fieldName === 'firstname' || fieldName.includes('first')) {
+      firstName = stringVal;
+    } else if (fieldName === 'last_name' || fieldName === 'lastname' || fieldName.includes('last')) {
+      lastName = stringVal;
+    } else if (!fullName && (fieldName === 'name' || fieldName.includes('name'))) {
+      fullName = stringVal;
+    } else if (fieldName.includes('email') || fieldName.includes('e-mail')) {
+      if (!email) email = stringVal;
+    } else if (fieldName.includes('phone') || fieldName.includes('mobile') || fieldName.includes('contact') || fieldName.includes('tel')) {
+      if (!phoneNumber) phoneNumber = stringVal;
+    } else if (fieldName.includes('city') || fieldName.includes('location') || fieldName.includes('town')) {
+      if (!city) city = stringVal;
+    }
+  });
+
+  if (!fullName) {
+    if (firstName && lastName) {
+      fullName = `${firstName} ${lastName}`.trim();
+    } else if (firstName) {
+      fullName = firstName;
+    } else if (lastName) {
+      fullName = lastName;
+    }
+  }
+
+  // Clean phone number: remove 'p:', 'tel:', leading letters or colons
+  const cleanPhone = (phoneNumber || '').replace(/^[a-zA-Z:]+/, '').trim();
+
+  return {
+    leadId,
+    formId,
+    pageId,
+    createdTime,
+    fullName: fullName || defaultName,
+    email: email || '',
+    phoneNumber: cleanPhone,
+    city,
+    rawFieldData: rawMap
+  };
+}
+
+/**
  * Fetches single lead data by leadgen_id from Meta Webhook event
  */
 export async function fetchLeadData(
@@ -226,40 +297,14 @@ export async function fetchLeadData(
       return { success: false, error: data.error.message };
     }
 
-    // Parse field values
-    const rawMap: Record<string, string> = {};
-    let fullName = '';
-    let email = '';
-    let phoneNumber = '';
-    let city = '';
-
-    (data.field_data || []).forEach((f: any) => {
-      const fieldName = (f.name || '').toLowerCase();
-      const val = Array.isArray(f.values) ? f.values[0] : f.values;
-      rawMap[fieldName] = val;
-
-      if (fieldName.includes('name') || fieldName.includes('full_name') || fieldName === 'name') {
-        if (!fullName) fullName = val;
-      } else if (fieldName.includes('email')) {
-        if (!email) email = val;
-      } else if (fieldName.includes('phone') || fieldName.includes('mobile') || fieldName.includes('contact')) {
-        if (!phoneNumber) phoneNumber = val;
-      } else if (fieldName.includes('city') || fieldName.includes('location')) {
-        if (!city) city = val;
-      }
-    });
-
-    const parsed: ParsedMetaLead = {
-      leadId: data.id,
-      formId: data.form_id,
-      pageId: data.page_id,
-      createdTime: data.created_time,
-      fullName: fullName || 'Meta Lead Prospect',
-      email: email || '',
-      phoneNumber: phoneNumber || '',
-      city,
-      rawFieldData: rawMap
-    };
+    const parsed = parseMetaLeadFields(
+      data.field_data,
+      data.id,
+      data.form_id,
+      data.page_id,
+      data.created_time,
+      'Meta Lead Prospect'
+    );
 
     return { success: true, lead: parsed };
   } catch (err: any) {
@@ -326,39 +371,14 @@ export async function fetchHistoricalLeads(
     }
 
     const parsedList: ParsedMetaLead[] = (data.data || []).map((item: any) => {
-      const rawMap: Record<string, string> = {};
-      let fullName = '';
-      let email = '';
-      let phoneNumber = '';
-      let city = '';
-
-      (item.field_data || []).forEach((f: any) => {
-        const fieldName = (f.name || '').toLowerCase();
-        const val = Array.isArray(f.values) ? f.values[0] : f.values;
-        rawMap[fieldName] = val;
-
-        if (fieldName.includes('name') || fieldName.includes('full_name')) {
-          if (!fullName) fullName = val;
-        } else if (fieldName.includes('email')) {
-          if (!email) email = val;
-        } else if (fieldName.includes('phone') || fieldName.includes('mobile')) {
-          if (!phoneNumber) phoneNumber = val;
-        } else if (fieldName.includes('city') || fieldName.includes('location')) {
-          if (!city) city = val;
-        }
-      });
-
-      return {
-        leadId: item.id,
-        formId: item.form_id || formId,
-        pageId: '',
-        createdTime: item.created_time,
-        fullName: fullName || 'Historical Lead',
-        email: email || '',
-        phoneNumber: phoneNumber || '',
-        city,
-        rawFieldData: rawMap
-      };
+      return parseMetaLeadFields(
+        item.field_data,
+        item.id,
+        item.form_id || formId,
+        '',
+        item.created_time,
+        'Historical Lead'
+      );
     });
 
     return { success: true, leads: parsedList };

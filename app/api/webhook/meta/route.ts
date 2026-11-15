@@ -70,12 +70,25 @@ export async function POST(request: Request) {
 
           const lead = leadRes.lead;
 
-          // 3. De-duplicate: check if lead already inserted
-          const { data: existing } = await supabaseAdmin
+          // 3. De-duplicate: check if lead already inserted (safe separate checks to avoid PostgREST query syntax errors with +)
+          let existing = null;
+
+          const { data: byLeadId } = await supabaseAdmin
             .from('leads')
             .select('id')
-            .or(`phone.eq.${lead.phoneNumber},source_page.ilike.%${leadgenId}%`)
+            .ilike('source_page', `%${leadgenId}%`)
             .maybeSingle();
+
+          if (byLeadId) {
+            existing = byLeadId;
+          } else if (lead.phoneNumber && lead.phoneNumber.trim().length >= 6) {
+            const { data: byPhone } = await supabaseAdmin
+              .from('leads')
+              .select('id')
+              .eq('phone', lead.phoneNumber.trim())
+              .maybeSingle();
+            if (byPhone) existing = byPhone;
+          }
 
           if (existing) {
             console.log(`[Meta Webhook] Lead ${leadgenId} already ingested. Skipping duplicate.`);

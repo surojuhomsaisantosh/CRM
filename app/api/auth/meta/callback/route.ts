@@ -8,7 +8,9 @@ export async function GET(request: Request) {
   const stateToken = url.searchParams.get('state'); // The client_connect_token
   const error = url.searchParams.get('error_description') || url.searchParams.get('error');
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || url.origin;
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
+  const proto = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || `${proto}://${host}`;
 
   if (error || !code || !stateToken) {
     const errorMsg = error || 'Authorization was cancelled or failed.';

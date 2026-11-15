@@ -6,6 +6,7 @@ const {
   isMetaConfigured,
   getMetaOAuthUrl,
   fetchHistoricalLeads,
+  parseMetaLeadFields,
 } = require('@/lib/meta.ts');
 
 test('Meta Integration: Configuration detector', () => {
@@ -39,4 +40,33 @@ test('Meta Integration: Historical lead puller respects date filtering', async (
     assert.ok(lead.fullName);
     assert.ok(lead.phoneNumber);
   });
+});
+
+test('Meta Integration: parseMetaLeadFields combines first and last name correctly', () => {
+  const fields = [
+    { name: 'first_name', values: ['Ananya'] },
+    { name: 'last_name', values: ['Sharma'] },
+    { name: 'email', values: ['ananya.sharma@example.com'] },
+    { name: 'phone_number', values: ['p:+919876543210'] },
+    { name: 'city', values: ['Hyderabad'] }
+  ];
+
+  const parsed = parseMetaLeadFields(fields, 'lead_101', 'form_202', 'page_303');
+  assert.strictEqual(parsed.fullName, 'Ananya Sharma');
+  assert.strictEqual(parsed.phoneNumber, '+919876543210', 'Should strip p: prefix from phone');
+  assert.strictEqual(parsed.email, 'ananya.sharma@example.com');
+  assert.strictEqual(parsed.city, 'Hyderabad');
+  assert.strictEqual(parsed.leadId, 'lead_101');
+  assert.strictEqual(parsed.formId, 'form_202');
+});
+
+test('Meta Integration: parseMetaLeadFields prioritizes explicit full_name and cleans tel: prefix', () => {
+  const fields = [
+    { name: 'full_name', values: ['Dr. Vikramaditya Verma'] },
+    { name: 'phone', values: ['tel:+919845012345'] }
+  ];
+
+  const parsed = parseMetaLeadFields(fields, 'lead_102', 'form_202');
+  assert.strictEqual(parsed.fullName, 'Dr. Vikramaditya Verma');
+  assert.strictEqual(parsed.phoneNumber, '+919845012345', 'Should strip tel: prefix from phone');
 });

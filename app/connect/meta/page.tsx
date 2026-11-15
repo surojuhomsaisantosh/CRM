@@ -46,6 +46,7 @@ function ConnectMetaContent() {
   const [availablePages, setAvailablePages] = useState<DiscoveredPage[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<string>('');
   const [isConnectingPage, setIsConnectingPage] = useState(false);
+  const [isSimulated, setIsSimulated] = useState(false);
   const [connectionSuccess, setConnectionSuccess] = useState(statusParam === 'success');
   const [connectedPageName, setConnectedPageName] = useState(pageNameParam || '');
   const [errorMessage, setErrorMessage] = useState(errorParam || '');
@@ -104,6 +105,7 @@ function ConnectMetaContent() {
   // Sandbox Simulated Connect (for instantaneous testing without Meta developer keys)
   const handleSimulatedConnect = async () => {
     setIsConnectingPage(true);
+    setIsSimulated(true);
     setErrorMessage('');
 
     // Simulate 2 discovered pages to showcase the multi-page disambiguation feature
@@ -271,6 +273,21 @@ function ConnectMetaContent() {
             </p>
           </div>
 
+          {isSimulated && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900 space-y-1.5">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
+                <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Sandbox Demonstration Preview</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                These preview pages were dynamically generated using your project name (<strong>{tokenData.projectName}</strong>) and client name (<strong>{tokenData.clientName}</strong>) because <code>NEXT_PUBLIC_META_APP_ID</code> is not yet configured in environment variables.
+              </p>
+              <p className="text-[11px] text-amber-700">
+                In production with your real Meta App credentials, clients will log into Facebook directly and this list will show their <strong>real Facebook Pages</strong> fetched live from the Meta Graph API.
+              </p>
+            </div>
+          )}
+
           {errorMessage && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-600 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -367,6 +384,18 @@ function ConnectMetaContent() {
 
         {/* Action Card */}
         <div className="rounded-2xl border border-[#e8ecf2] bg-white p-6 sm:p-8 shadow-sm space-y-6">
+          {!process.env.NEXT_PUBLIC_META_APP_ID && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold text-amber-900">Interactive Sandbox Mode</p>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Meta App ID (<code>NEXT_PUBLIC_META_APP_ID</code>) is not yet set in environment variables. Clicking "Connect with Facebook" will launch a simulated preview of the client onboarding & page selection experience.
+                </p>
+              </div>
+            </div>
+          )}
+
           {errorMessage && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-600 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
